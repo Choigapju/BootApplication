@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
+from io import BytesIO
 import os
 from dotenv import load_dotenv
 import pandas as pd
@@ -12,38 +13,29 @@ import re
 import datetime
 from werkzeug.utils import secure_filename
 
-# .env 파일 로드
+# 1. 환경 변수 로딩
 load_dotenv()
 
-# Flask 앱 초기화
-app = Flask(__name__, static_folder='public')
-CORS(app)  # CORS 미들웨어 설정
+# 2. 환경 변수에서 DB 정보 가져오기
+DB_USERNAME = os.getenv("DB_USERNAME")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
+DB_NAME = os.getenv("DB_NAME")
 
-# 데이터베이스 설정
-DB_USERNAME = os.getenv('DB_USERNAME')
-DB_PASSWORD = os.getenv('DB_PASSWORD')
-DB_HOST = os.getenv('DB_HOST')
-DB_PORT = os.getenv('DB_PORT')
-DB_NAME = os.getenv('DB_NAME')
+# 3. 연결 문자열 만들기
+DATABASE_URL = f"postgresql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-# 데이터베이스 환경 변수가 모두 설정되었는지 확인
-if not all([DB_USERNAME, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME]):
-    print("경고: 일부 데이터베이스 환경 변수가 설정되지 않았습니다.")
-    print(f"DB_USERNAME: {'설정됨' if DB_USERNAME else '설정되지 않음'}")
-    print(f"DB_PASSWORD: {'설정됨' if DB_PASSWORD else '설정되지 않음'}")
-    print(f"DB_HOST: {'설정됨' if DB_HOST else '설정되지 않음'}")
-    print(f"DB_PORT: {'설정됨' if DB_PORT else '설정되지 않음'}")
-    print(f"DB_NAME: {'설정됨' if DB_NAME else '설정되지 않음'}")
-    
-    # 환경 변수가 없는 경우 SQLite로 대체
-    print("SQLite 데이터베이스로 대체합니다.")
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
-else:
-    # 모든 데이터베이스 환경 변수가 설정된 경우 PostgreSQL 사용
-    DB_URL = f'postgresql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
-    app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
+# 4. Flask 앱 초기화
+app = Flask(__name__)
+CORS(app)
 
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+# 5. Flask 앱에 DB 설정 반영
+app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# 6. SQLAlchemy 초기화
+db = SQLAlchemy(app)
 
 # 파일 업로드 설정
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -601,4 +593,4 @@ if __name__ == '__main__':
     
     # 서버 시작 (환경 변수에서 포트 가져오기)
     port = int(os.environ.get('PORT', 10000))
-    app.run(host='0.0.0.0', debug=True, port=port)
+    app.run(host='0.0.0.0', debug=False, port=port)
