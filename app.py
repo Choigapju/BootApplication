@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, abort
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from io import BytesIO
@@ -22,10 +22,13 @@ DB_PORT = os.getenv("DB_PORT")  # 기본값 5432
 DB_NAME = os.getenv("DB_NAME")
 
 # 연결 문자열 만들기 전 유효성 검사
+DATABASE_URL = None  # 변수 초기화
 if not all([DB_USERNAME, DB_PASSWORD, DB_HOST, DB_NAME]):
     print("경고: 필수 데이터베이스 환경 변수가 설정되지 않았습니다!")
-     # 환경 변수에서 DATABASE_URL 직접 가져오기 시도
+    # 환경 변수에서 DATABASE_URL 직접 가져오기 시도
     DATABASE_URL = os.environ.get('DATABASE_URL')
+    if not DATABASE_URL:
+        print("DATABASE_URL 환경 변수도 없습니다. SQLite 기본값을 사용합니다.")
 else:
     # 유효한 포트 확인
     try:
@@ -42,14 +45,11 @@ print(f"사용되는 DATABASE_URL: {DATABASE_URL}")
 app = Flask(__name__)
 CORS(app)
 
-# 아래 라인을 수정합니다
+# Flask 앱에 DB 설정 반영
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
-
-# 5. Flask 앱에 DB 설정 반영
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get('DATABASE_URL', 'sqlite:///test.db')
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-# 6. SQLAlchemy 초기화
+# SQLAlchemy 초기화
 db = SQLAlchemy(app)
 
 # 파일 업로드 설정
@@ -225,7 +225,7 @@ def init_bootcamps():
     ]
     
     for bootcamp_data in bootcamps_data:
-        existing = db.session.get(Bootcamp, bootcamp_data["id"])
+        existing = db.session.query(Bootcamp).filter_by(id=bootcamp_data["id"]).first()
         if not existing:
             bootcamp = Bootcamp(id=bootcamp_data["id"], name=bootcamp_data["name"])
             db.session.add(bootcamp)
@@ -444,7 +444,7 @@ def get_students():
 @app.route('/api/students/<int:student_id>', methods=['PUT'])
 def update_student(student_id):
     """학생 상태 업데이트"""
-    student = db.session.get_or_404(Student, student_id)
+    student = db.session.query(Student).filter_by(id=student_id).first_or_404()
     
     data = request.get_json()
     
@@ -485,14 +485,14 @@ def get_bootcamps():
 @app.route('/api/bootcamps/<string:bootcamp_id>', methods=['GET'])
 def get_bootcamp(bootcamp_id):
     """특정 부트캠프 정보 가져오기"""
-    bootcamp = db.session.get_or_404(Bootcamp, bootcamp_id)
+    bootcamp = db.session.query(Bootcamp).filter_by(id=bootcamp_id).first_or_404()
     return jsonify(bootcamp.to_dict())
 
 @app.route('/api/bootcamps/<string:bootcamp_id>/students', methods=['GET'])
 def get_bootcamp_students(bootcamp_id):
     """부트캠프별 학생 데이터 가져오기"""
     # 존재하는 부트캠프인지 확인
-    db.session.get_or_404(Bootcamp, bootcamp_id)
+    bootcamp = db.session.query(Bootcamp).filter_by(id=bootcamp_id).first_or_404()
     
     # 해당 부트캠프의 학생 데이터
     students = Student.query.filter_by(bootcamp_id=bootcamp_id).all()
@@ -502,9 +502,7 @@ def get_bootcamp_students(bootcamp_id):
 def upload_bootcamp_file(bootcamp_id):
     """부트캠프별 학생 데이터 업로드 처리"""
     # 부트캠프 존재 여부 확인
-    bootcamp = db.session.query(Bootcamp).filter_by(id=bootcamp_id).first()
-    if not bootcamp:
-        abort(404)
+    bootcamp = db.session.query(Bootcamp).filter_by(id=bootcamp_id).first_or_404()
     
     if 'file' not in request.files:
         return jsonify({"error": "파일이 업로드되지 않았습니다."}), 400
@@ -536,7 +534,7 @@ def upload_bootcamp_file(bootcamp_id):
 def get_bootcamp_stats(bootcamp_id):
     """부트캠프별 통계 API"""
     # 존재하는 부트캠프인지 확인
-    db.session.get_or_404(Bootcamp, bootcamp_id)
+    bootcamp = db.session.query(Bootcamp).filter_by(id=bootcamp_id).first_or_404()
     
     # 해당 부트캠프의 학생 데이터
     students = Student.query.filter_by(bootcamp_id=bootcamp_id).all()
@@ -565,10 +563,10 @@ def get_bootcamp_stats(bootcamp_id):
 def update_bootcamp_student(bootcamp_id, student_id):
     """학생 상태 업데이트 (부트캠프 ID 포함)"""
     # 부트캠프 존재 여부 확인
-    db.session.get_or_404(Bootcamp, bootcamp_id)
+    bootcamp = db.session.query(Bootcamp).filter_by(id=bootcamp_id).first_or_404()
     
     # 학생 조회
-    student = db.session.get_or_404(Student, student_id)
+    student = db.session.query(Student).filter_by(id=student_id).first_or_404()
     
     # 해당 부트캠프에 속한 학생인지 확인
     if student.bootcamp_id != bootcamp_id:
