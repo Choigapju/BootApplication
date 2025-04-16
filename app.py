@@ -26,15 +26,24 @@ DB_HOST = os.getenv('DB_HOST')
 DB_PORT = os.getenv('DB_PORT')
 DB_NAME = os.getenv('DB_NAME')
 
-# 환경 변수가 없을 경우 기본값 설정 (개발 환경용)
-if not DB_USERNAME or not DB_PASSWORD:
-    print("경고: 데이터베이스 자격 증명이 .env 파일에 설정되지 않았습니다.")
-    # 개발 환경을 위한 기본값이나 에러 처리를 여기에 추가할 수 있습니다.
+# 데이터베이스 환경 변수가 모두 설정되었는지 확인
+if not all([DB_USERNAME, DB_PASSWORD, DB_HOST, DB_PORT, DB_NAME]):
+    print("경고: 일부 데이터베이스 환경 변수가 설정되지 않았습니다.")
+    print(f"DB_USERNAME: {'설정됨' if DB_USERNAME else '설정되지 않음'}")
+    print(f"DB_PASSWORD: {'설정됨' if DB_PASSWORD else '설정되지 않음'}")
+    print(f"DB_HOST: {'설정됨' if DB_HOST else '설정되지 않음'}")
+    print(f"DB_PORT: {'설정됨' if DB_PORT else '설정되지 않음'}")
+    print(f"DB_NAME: {'설정됨' if DB_NAME else '설정되지 않음'}")
+    
+    # 환경 변수가 없는 경우 SQLite로 대체
+    print("SQLite 데이터베이스로 대체합니다.")
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
+else:
+    # 모든 데이터베이스 환경 변수가 설정된 경우 PostgreSQL 사용
+    DB_URL = f'postgresql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
+    app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
 
-DB_URL = f'postgresql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
-app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
 
 # 파일 업로드 설정
 app.config['UPLOAD_FOLDER'] = 'uploads'
