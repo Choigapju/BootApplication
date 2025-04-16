@@ -521,5 +521,6 @@ def update_bootcamp_student(bootcamp_id, student_id):
     return jsonify(bootcamp_students[bootcamp_id][student_index])
 
 if __name__ == '__main__':
-    # 서버 시작 (포트 10000으로 수정)
-    app.run(debug=True, port=10000)
+    # 서버 시작 (환경 변수에서 포트 가져오기)
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', debug=True, port=port)
