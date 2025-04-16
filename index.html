@@ -624,8 +624,8 @@
         let reasonBarChart = null; // 이유 막대 차트 객체
         let activeStudentId = null; // 상태 변경 중인 학생 ID
 
-        // API URL (배포 환경에 맞게 조정 필요)
-        const API_URL = window.location.origin + '/api';
+        // API URL (Flask로 변경된 서버 포트로 설정)
+        const API_URL = window.location.protocol + '//' + window.location.hostname + ':10000/api';
 
         // 상태 옵션과 설명
         const statusOptions = {
@@ -813,7 +813,7 @@
                     ? `${API_URL}/upload`
                     : `${API_URL}/bootcamps/${currentBootcamp}/upload`;
                 
-                    const response = await fetch(uploadUrl, {
+                const response = await fetch(uploadUrl, {
                     method: 'POST',
                     body: formData
                 });
@@ -1354,6 +1354,11 @@
 
         // 페이지 로드 시 초기화
         document.addEventListener('DOMContentLoaded', init);
+        
+        // 전역 함수 정의 (HTML에서 직접 호출 가능하도록)
+        window.handleStatusChange = handleStatusChange;
+        window.handleNoteChange = handleNoteChange;
+        window.callStudent = callStudent;
     </script>
 </body>
 </html>
