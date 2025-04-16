@@ -502,7 +502,9 @@ def get_bootcamp_students(bootcamp_id):
 def upload_bootcamp_file(bootcamp_id):
     """부트캠프별 학생 데이터 업로드 처리"""
     # 부트캠프 존재 여부 확인
-    bootcamp = db.session.get_or_404(Bootcamp, bootcamp_id)
+    bootcamp = db.session.query(Bootcamp).filter_by(id=bootcamp_id).first()
+    if not bootcamp:
+        abort(404)
     
     if 'file' not in request.files:
         return jsonify({"error": "파일이 업로드되지 않았습니다."}), 400
