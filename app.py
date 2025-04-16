@@ -15,15 +15,17 @@ from werkzeug.utils import secure_filename
 load_dotenv()
 
 # 환경 변수에서 DB 정보 가져오기
-DB_USERNAME = os.getenv("DB_USERNAME", "")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "")
-DB_HOST = os.getenv("DB_HOST", "")
-DB_PORT = os.getenv("DB_PORT", "5432")  # 기본값 5432
-DB_NAME = os.getenv("DB_NAME", "")
+DB_USERNAME = os.getenv("DB_USERNAME")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")  # 기본값 5432
+DB_NAME = os.getenv("DB_NAME")
 
 # 연결 문자열 만들기 전 유효성 검사
 if not all([DB_USERNAME, DB_PASSWORD, DB_HOST, DB_NAME]):
     print("경고: 필수 데이터베이스 환경 변수가 설정되지 않았습니다!")
+     # 환경 변수에서 DATABASE_URL 직접 가져오기 시도
+    DATABASE_URL = os.environ.get('DATABASE_URL')
 else:
     # 유효한 포트 확인
     try:
@@ -36,9 +38,12 @@ else:
 
 print(f"사용되는 DATABASE_URL: {DATABASE_URL}")
 
-# 4. Flask 앱 초기화
+# Flask 앱 초기화
 app = Flask(__name__)
 CORS(app)
+
+# 아래 라인을 수정합니다
+app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 
 # 5. Flask 앱에 DB 설정 반영
 app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get('DATABASE_URL', 'sqlite:///test.db')
