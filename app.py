@@ -16,15 +16,29 @@ from werkzeug.utils import secure_filename
 # 1. 환경 변수 로딩
 load_dotenv()
 
-# 2. 환경 변수에서 DB 정보 가져오기
-DB_USERNAME = os.getenv("DB_USERNAME")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-DB_HOST = os.getenv("DB_HOST")
-DB_PORT = os.getenv("DB_PORT")
-DB_NAME = os.getenv("DB_NAME")
+# 환경 변수에서 DB 정보 가져오기
+DB_USERNAME = os.getenv("DB_USERNAME", "")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "")
+DB_HOST = os.getenv("DB_HOST", "")
+DB_PORT = os.getenv("DB_PORT", "5432")  # 기본값 5432
+DB_NAME = os.getenv("DB_NAME", "")
 
-# 3. 연결 문자열 만들기
-DATABASE_URL = f"postgresql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+# 연결 문자열 만들기 전 유효성 검사
+if not all([DB_USERNAME, DB_PASSWORD, DB_HOST, DB_NAME]):
+    print("경고: 필수 데이터베이스 환경 변수가 설정되지 않았습니다!")
+    # 개발 환경을 위한 대체 설정
+    DATABASE_URL = "sqlite:///test.db"  # 개발용 SQLite 데이터베이스
+else:
+    # 유효한 포트 확인
+    try:
+        port = int(DB_PORT)
+    except ValueError:
+        print(f"경고: 잘못된 포트 번호 '{DB_PORT}', 기본값 5432로 설정합니다.")
+        port = 5432
+        
+    DATABASE_URL = f"postgresql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{port}/{DB_NAME}"
+
+print(f"사용되는 DATABASE_URL: {DATABASE_URL}")
 
 # 4. Flask 앱 초기화
 app = Flask(__name__)
@@ -186,7 +200,7 @@ def format_phone(phone):
         if len(formatted_phone) == 11:  # 01012345678
             formatted_phone = f"{formatted_phone[:3]}-{formatted_phone[3:7]}-{formatted_phone[7:]}"
         elif len(formatted_phone) == 10:  # 0101234567
-            formatted_phone = f"{formatted_phone[:3]}-{formatted_phone[3:6]}-{formatted_phone[6:]}"
+            formatted_phone = f"0{formatted_phone[:2]}-{formatted_phone[2:5]}-{formatted_phone[5:]}"
     
     return formatted_phone
 
@@ -590,7 +604,7 @@ if __name__ == '__main__':
         db.create_all()
         # 부트캠프 데이터 초기화
         init_bootcamps()
-    
+    print("DATABASE_URL =", os.environ.get("DATABASE_URL"))
     # 서버 시작 (환경 변수에서 포트 가져오기)
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', debug=False, port=port)
