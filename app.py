@@ -1,20 +1,42 @@
-# app.py
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+from flask_sqlalchemy import SQLAlchemy
 import os
+from dotenv import load_dotenv
 import pandas as pd
 import csv
 import json
-import shutil
 import time
 import random
 import re
 import datetime
 from werkzeug.utils import secure_filename
 
+# .env 파일 로드
+load_dotenv()
+
 # Flask 앱 초기화
 app = Flask(__name__, static_folder='public')
 CORS(app)  # CORS 미들웨어 설정
+
+# 데이터베이스 설정
+DB_USERNAME = os.getenv('DB_USERNAME')
+DB_PASSWORD = os.getenv('DB_PASSWORD')
+DB_HOST = os.getenv('DB_HOST')
+DB_PORT = os.getenv('DB_PORT')
+DB_NAME = os.getenv('DB_NAME')
+
+# 환경 변수가 없을 경우 기본값 설정 (개발 환경용)
+if not DB_USERNAME or not DB_PASSWORD:
+    print("경고: 데이터베이스 자격 증명이 .env 파일에 설정되지 않았습니다.")
+    # 개발 환경을 위한 기본값이나 에러 처리를 여기에 추가할 수 있습니다.
+
+DB_URL = f'postgresql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
+app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+# 파일 업로드 설정
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 파일 크기 제한 (16MB)
 
@@ -22,31 +44,51 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 파일 크기 제한 (16M
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
-# 데이터 저장소 (간단한 In-Memory DB)
-students = []
-courses = []
-course_students = {}  # 과정별 학생 데이터 저장
+# 학생 모델 정의
+class Student(db.Model):
+    __tablename__ = 'students'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    gender = db.Column(db.String(10))
+    age = db.Column(db.Integer)
+    phone = db.Column(db.String(20), unique=True, nullable=False)
+    email = db.Column(db.String(100))
+    bootcamp_id = db.Column(db.String(50))
+    status = db.Column(db.String(20), default='applying')
+    considering_reason = db.Column(db.String(50))
+    last_contact_date = db.Column(db.Date, default=datetime.datetime.now().date())
+    notes = db.Column(db.Text)
+    updated_at = db.Column(db.DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'gender': self.gender,
+            'age': self.age,
+            'phone': self.phone,
+            'email': self.email,
+            'bootcampId': self.bootcamp_id,
+            'status': self.status,
+            'consideringReason': self.considering_reason,
+            'lastContactDate': self.last_contact_date.strftime('%Y-%m-%d') if self.last_contact_date else None,
+            'notes': self.notes,
+            'updatedAt': self.updated_at.isoformat() if self.updated_at else None
+        }
 
-# 부트캠프 정보 저장소
-bootcamps = [
-    {"id": "frontend", "name": "프론트엔드"},
-    {"id": "backend", "name": "백엔드"},
-    {"id": "ios", "name": "iOS 개발"},
-    {"id": "android", "name": "Android 개발"},
-    {"id": "data", "name": "데이터 분석"},
-    {"id": "uxui", "name": "UX/UI 디자인"},
-    {"id": "startup", "name": "스타트업 스테이션"},
-    {"id": "shortterm", "name": "단기 심화"},
-    {"id": "ai-service", "name": "AI 웹 서비스 개발"},
-    {"id": "game", "name": "유니티 게임 개발"},
-    {"id": "cloud", "name": "클라우드 엔지니어링"},
-    {"id": "ai", "name": "AI"},
-    {"id": "blockchain", "name": "블록체인"},
-    {"id": "growth", "name": "그로스 마케팅"}
-]
-
-# 부트캠프별 학생 데이터
-bootcamp_students = {}
+# 부트캠프 모델 정의
+class Bootcamp(db.Model):
+    __tablename__ = 'bootcamps'
+    
+    id = db.Column(db.String(50), primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name
+        }
 
 def allowed_file(filename):
     """허용된 파일 확장자인지 확인"""
@@ -147,6 +189,35 @@ def format_phone(phone):
     
     return formatted_phone
 
+def init_bootcamps():
+    """부트캠프 초기 데이터 설정"""
+    bootcamps_data = [
+        {"id": "frontend", "name": "프론트엔드"},
+        {"id": "backend", "name": "백엔드"},
+        {"id": "ios", "name": "iOS 개발"},
+        {"id": "android", "name": "Android 개발"},
+        {"id": "data", "name": "데이터 분석"},
+        {"id": "uxui", "name": "UX/UI 디자인"},
+        {"id": "startup", "name": "스타트업 스테이션"},
+        {"id": "shortterm", "name": "단기 심화"},
+        {"id": "ai-service", "name": "AI 웹 서비스 개발"},
+        {"id": "game", "name": "유니티 게임 개발"},
+        {"id": "cloud", "name": "클라우드 엔지니어링"},
+        {"id": "ai", "name": "AI"},
+        {"id": "blockchain", "name": "블록체인"},
+        {"id": "growth", "name": "그로스 마케팅"}
+    ]
+    
+    for bootcamp_data in bootcamps_data:
+        existing = Bootcamp.query.get(bootcamp_data["id"])
+        if not existing:
+            bootcamp = Bootcamp(id=bootcamp_data["id"], name=bootcamp_data["name"])
+            db.session.add(bootcamp)
+    
+    db.session.commit()
+    
+    return [bootcamp.to_dict() for bootcamp in Bootcamp.query.all()]
+
 def parse_csv(file_path, bootcamp_id=None):
     """CSV 파일 파싱"""
     results = []
@@ -180,28 +251,41 @@ def parse_csv(file_path, bootcamp_id=None):
             # 성별 결정
             gender = determine_gender(name, gender_data)
             
-            # 학생 데이터 생성
-            student = {
-                "id": int(time.time() * 1000 + random.randint(0, 1000)),
-                "name": name,
-                "gender": gender,
-                "age": age,
-                "phone": formatted_phone,
-                "email": email if email else '',
-                "status": "applying",
-                "consideringReason": None,
-                "lastContactDate": datetime.datetime.now().strftime("%Y-%m-%d"),
-                "notes": "",
-                "updatedAt": datetime.datetime.now().isoformat()
-            }
+            # 기존 학생 확인
+            existing_student = Student.query.filter_by(phone=formatted_phone).first()
             
-            # 부트캠프 ID가 제공된 경우 추가
-            if bootcamp_id:
-                student["bootcampId"] = bootcamp_id
+            if existing_student:
+                # 기존 학생 업데이트
+                existing_student.name = name
+                existing_student.gender = gender
+                existing_student.age = age
+                existing_student.email = email if email else ''
                 
-            results.append(student)
+                if bootcamp_id and not existing_student.bootcamp_id:
+                    existing_student.bootcamp_id = bootcamp_id
+                
+                db.session.add(existing_student)
+                results.append(existing_student.to_dict())
+            else:
+                # 새 학생 생성
+                student = Student(
+                    name=name,
+                    gender=gender,
+                    age=age,
+                    phone=formatted_phone,
+                    email=email if email else '',
+                    bootcamp_id=bootcamp_id,
+                    status="applying",
+                    last_contact_date=datetime.datetime.now().date()
+                )
+                db.session.add(student)
+                db.session.flush()  # ID 생성을 위한 flush
+                results.append(student.to_dict())
+        
+        db.session.commit()
             
     except Exception as e:
+        db.session.rollback()
         print(f"CSV 파싱 오류: {e}")
         
     # 완료 후 파일 삭제
@@ -255,28 +339,41 @@ def parse_excel(file_path, bootcamp_id=None):
             # 성별 결정
             gender = determine_gender(name, gender_data)
             
-            # 학생 데이터 생성
-            student = {
-                "id": int(time.time() * 1000 + i),
-                "name": name,
-                "gender": gender,
-                "age": age,
-                "phone": formatted_phone,
-                "email": email if email else '',
-                "status": "applying",
-                "consideringReason": None,
-                "lastContactDate": datetime.datetime.now().strftime("%Y-%m-%d"),
-                "notes": "",
-                "updatedAt": datetime.datetime.now().isoformat()
-            }
+            # 기존 학생 확인
+            existing_student = Student.query.filter_by(phone=formatted_phone).first()
             
-            # 부트캠프 ID가 제공된 경우 추가
-            if bootcamp_id:
-                student["bootcampId"] = bootcamp_id
+            if existing_student:
+                # 기존 학생 업데이트
+                existing_student.name = name
+                existing_student.gender = gender
+                existing_student.age = age
+                existing_student.email = email if email else ''
                 
-            results.append(student)
+                if bootcamp_id and not existing_student.bootcamp_id:
+                    existing_student.bootcamp_id = bootcamp_id
+                
+                db.session.add(existing_student)
+                results.append(existing_student.to_dict())
+            else:
+                # 새 학생 생성
+                student = Student(
+                    name=name,
+                    gender=gender,
+                    age=age,
+                    phone=formatted_phone,
+                    email=email if email else '',
+                    bootcamp_id=bootcamp_id,
+                    status="applying",
+                    last_contact_date=datetime.datetime.now().date()
+                )
+                db.session.add(student)
+                db.session.flush()  # ID 생성을 위한 flush
+                results.append(student.to_dict())
+        
+        db.session.commit()
             
     except Exception as e:
+        db.session.rollback()
         print(f"Excel 파싱 오류: {e}")
         
     # 완료 후 파일 삭제
@@ -296,8 +393,6 @@ def index():
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
     """파일 업로드 API (전체 학생 데이터용)"""
-    global students
-    
     if 'file' not in request.files:
         return jsonify({"error": "파일이 업로드되지 않았습니다."}), 400
         
@@ -320,100 +415,78 @@ def upload_file():
         else:
             return jsonify({"error": "지원되지 않는 파일 형식입니다."}), 400
             
-        # 기존 데이터에 새 데이터 누적 반영
-        # 전화번호를 기준으로 중복 체크
-        phone_numbers = set(student["phone"] for student in students)
-        new_students = [student for student in parsed_data if student["phone"] not in phone_numbers]
-        
-        # 기존 데이터에 추가
-        students.extend(new_students)
-        
-        return jsonify({"success": True, "count": len(new_students)})
+        return jsonify({"success": True, "count": len(parsed_data)})
     
     return jsonify({"error": "지원되지 않는 파일 형식입니다."}), 400
 
 @app.route('/api/students', methods=['GET'])
 def get_students():
     """모든 학생 데이터 가져오기"""
-    return jsonify(students)
+    students = Student.query.all()
+    return jsonify([student.to_dict() for student in students])
 
 @app.route('/api/students/<int:student_id>', methods=['PUT'])
 def update_student(student_id):
     """학생 상태 업데이트"""
-    global students
+    student = Student.query.get_or_404(student_id)
     
-    updated_data = request.get_json()
+    data = request.get_json()
     
-    student_index = -1
-    for i, student in enumerate(students):
-        if student["id"] == student_id:
-            student_index = i
-            break
+    if 'status' in data:
+        student.status = data['status']
     
-    if student_index == -1:
-        return jsonify({"error": "학생을 찾을 수 없습니다."}), 404
+    if 'consideringReason' in data:
+        student.considering_reason = data['consideringReason']
     
-    # 데이터 업데이트
-    students[student_index].update(updated_data)
-    students[student_index]["updatedAt"] = datetime.datetime.now().isoformat()
+    if 'notes' in data:
+        student.notes = data['notes']
     
-    # 부트캠프별 데이터에서도 학생 정보 업데이트
-    bootcamp_id = students[student_index].get("bootcampId")
-    if bootcamp_id and bootcamp_id in bootcamp_students:
-        bootcamp_student_index = -1
-        for i, student in enumerate(bootcamp_students[bootcamp_id]):
-            if student["id"] == student_id:
-                bootcamp_student_index = i
-                break
-                
-        if bootcamp_student_index != -1:
-            bootcamp_students[bootcamp_id][bootcamp_student_index].update(updated_data)
-            bootcamp_students[bootcamp_id][bootcamp_student_index]["updatedAt"] = datetime.datetime.now().isoformat()
+    if 'lastContactDate' in data:
+        try:
+            student.last_contact_date = datetime.datetime.strptime(data['lastContactDate'], '%Y-%m-%d').date()
+        except:
+            pass  # 날짜 형식이 잘못된 경우 무시
     
-    return jsonify(students[student_index])
-
-@app.route('/api/courses', methods=['GET'])
-def get_courses():
-    """과정 목록 조회"""
-    return jsonify(courses)
-
-@app.route('/api/courses/<string:course_id>', methods=['GET'])
-def get_course(course_id):
-    """특정 과정 조회"""
-    course = next((c for c in courses if c["id"] == course_id), None)
-    if not course:
-        return jsonify({"error": "과정을 찾을 수 없습니다."}), 404
-    return jsonify(course)
+    student.updated_at = datetime.datetime.now()
+    
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+    
+    return jsonify(student.to_dict())
 
 @app.route('/api/bootcamps', methods=['GET'])
 def get_bootcamps():
     """모든 부트캠프 정보 가져오기"""
-    return jsonify(bootcamps)
+    bootcamps = Bootcamp.query.all()
+    if not bootcamps:
+        # 부트캠프 데이터가 없으면 초기화
+        return jsonify(init_bootcamps())
+    return jsonify([bootcamp.to_dict() for bootcamp in bootcamps])
 
 @app.route('/api/bootcamps/<string:bootcamp_id>', methods=['GET'])
 def get_bootcamp(bootcamp_id):
     """특정 부트캠프 정보 가져오기"""
-    bootcamp = next((b for b in bootcamps if b["id"] == bootcamp_id), None)
-    if not bootcamp:
-        return jsonify({"error": "부트캠프를 찾을 수 없습니다."}), 404
-    return jsonify(bootcamp)
+    bootcamp = Bootcamp.query.get_or_404(bootcamp_id)
+    return jsonify(bootcamp.to_dict())
 
 @app.route('/api/bootcamps/<string:bootcamp_id>/students', methods=['GET'])
 def get_bootcamp_students(bootcamp_id):
     """부트캠프별 학생 데이터 가져오기"""
-    # 해당 부트캠프의 학생 데이터가 없으면 빈 배열 반환
-    bootcamp_student_list = bootcamp_students.get(bootcamp_id, [])
-    return jsonify(bootcamp_student_list)
+    # 존재하는 부트캠프인지 확인
+    Bootcamp.query.get_or_404(bootcamp_id)
+    
+    # 해당 부트캠프의 학생 데이터
+    students = Student.query.filter_by(bootcamp_id=bootcamp_id).all()
+    return jsonify([student.to_dict() for student in students])
 
 @app.route('/api/bootcamps/<string:bootcamp_id>/upload', methods=['POST'])
 def upload_bootcamp_file(bootcamp_id):
     """부트캠프별 학생 데이터 업로드 처리"""
-    global students, bootcamp_students
-    
     # 부트캠프 존재 여부 확인
-    bootcamp = next((b for b in bootcamps if b["id"] == bootcamp_id), None)
-    if not bootcamp:
-        return jsonify({"error": "부트캠프를 찾을 수 없습니다."}), 404
+    bootcamp = Bootcamp.query.get_or_404(bootcamp_id)
     
     if 'file' not in request.files:
         return jsonify({"error": "파일이 업로드되지 않았습니다."}), 400
@@ -437,49 +510,35 @@ def upload_bootcamp_file(bootcamp_id):
         else:
             return jsonify({"error": "지원되지 않는 파일 형식입니다."}), 400
             
-        # 기존 부트캠프 데이터가 없으면 초기화
-        if bootcamp_id not in bootcamp_students:
-            bootcamp_students[bootcamp_id] = []
-        
-        # 전화번호를 기준으로 중복 체크 - 부트캠프 내 중복
-        phone_numbers = set(student["phone"] for student in bootcamp_students[bootcamp_id])
-        new_bootcamp_students = [student for student in parsed_data if student["phone"] not in phone_numbers]
-        
-        # 기존 부트캠프 데이터에 추가
-        bootcamp_students[bootcamp_id].extend(new_bootcamp_students)
-        
-        # 전체 데이터에도 추가 (중복 체크)
-        all_phone_numbers = set(student["phone"] for student in students)
-        new_overall_students = [student for student in new_bootcamp_students if student["phone"] not in all_phone_numbers]
-        
-        # 전체 데이터에 추가
-        students.extend(new_overall_students)
-        
-        return jsonify({"success": True, "count": len(new_bootcamp_students)})
+        return jsonify({"success": True, "count": len(parsed_data)})
     
     return jsonify({"error": "지원되지 않는 파일 형식입니다."}), 400
 
 @app.route('/api/bootcamps/<string:bootcamp_id>/stats', methods=['GET'])
 def get_bootcamp_stats(bootcamp_id):
     """부트캠프별 통계 API"""
-    students_list = bootcamp_students.get(bootcamp_id, [])
+    # 존재하는 부트캠프인지 확인
+    Bootcamp.query.get_or_404(bootcamp_id)
+    
+    # 해당 부트캠프의 학생 데이터
+    students = Student.query.filter_by(bootcamp_id=bootcamp_id).all()
     
     stats = {
-        "total": len(students_list),
+        "total": len(students),
         "statusCount": {
-            "applying": sum(1 for s in students_list if s["status"] == "applying"),
-            "accepted": sum(1 for s in students_list if s["status"] == "accepted"),
-            "considering": sum(1 for s in students_list if s["status"] == "considering"),
-            "registered": sum(1 for s in students_list if s["status"] == "registered"),
-            "canceled": sum(1 for s in students_list if s["status"] == "canceled")
+            "applying": sum(1 for s in students if s.status == "applying"),
+            "accepted": sum(1 for s in students if s.status == "accepted"),
+            "considering": sum(1 for s in students if s.status == "considering"),
+            "registered": sum(1 for s in students if s.status == "registered"),
+            "canceled": sum(1 for s in students if s.status == "canceled")
         },
         "consideringReasons": {}
     }
     
     # 고민중 이유 집계
-    for student in students_list:
-        if student["status"] == "considering" and student["consideringReason"]:
-            reason = student["consideringReason"]
+    for student in students:
+        if student.status == "considering" and student.considering_reason:
+            reason = student.considering_reason
             stats["consideringReasons"][reason] = stats["consideringReasons"].get(reason, 0) + 1
     
     return jsonify(stats)
@@ -487,40 +546,50 @@ def get_bootcamp_stats(bootcamp_id):
 @app.route('/api/bootcamps/<string:bootcamp_id>/students/<int:student_id>', methods=['PUT'])
 def update_bootcamp_student(bootcamp_id, student_id):
     """학생 상태 업데이트 (부트캠프 ID 포함)"""
-    global students, bootcamp_students
+    # 부트캠프 존재 여부 확인
+    Bootcamp.query.get_or_404(bootcamp_id)
     
-    if bootcamp_id not in bootcamp_students:
-        return jsonify({"error": "부트캠프를 찾을 수 없습니다."}), 404
+    # 학생 조회
+    student = Student.query.get_or_404(student_id)
     
-    updated_data = request.get_json()
+    # 해당 부트캠프에 속한 학생인지 확인
+    if student.bootcamp_id != bootcamp_id:
+        return jsonify({"error": "해당 부트캠프에 속한 학생이 아닙니다."}), 404
     
-    student_index = -1
-    for i, student in enumerate(bootcamp_students[bootcamp_id]):
-        if student["id"] == student_id:
-            student_index = i
-            break
+    data = request.get_json()
     
-    if student_index == -1:
-        return jsonify({"error": "학생을 찾을 수 없습니다."}), 404
+    if 'status' in data:
+        student.status = data['status']
     
-    # 데이터 업데이트
-    bootcamp_students[bootcamp_id][student_index].update(updated_data)
-    bootcamp_students[bootcamp_id][student_index]["updatedAt"] = datetime.datetime.now().isoformat()
+    if 'consideringReason' in data:
+        student.considering_reason = data['consideringReason']
     
-    # 전체 데이터에서도 학생 정보 업데이트
-    all_student_index = -1
-    for i, student in enumerate(students):
-        if student["id"] == student_id:
-            all_student_index = i
-            break
-            
-    if all_student_index != -1:
-        students[all_student_index].update(updated_data)
-        students[all_student_index]["updatedAt"] = datetime.datetime.now().isoformat()
+    if 'notes' in data:
+        student.notes = data['notes']
     
-    return jsonify(bootcamp_students[bootcamp_id][student_index])
+    if 'lastContactDate' in data:
+        try:
+            student.last_contact_date = datetime.datetime.strptime(data['lastContactDate'], '%Y-%m-%d').date()
+        except:
+            pass  # 날짜 형식이 잘못된 경우 무시
+    
+    student.updated_at = datetime.datetime.now()
+    
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+    
+    return jsonify(student.to_dict())
 
 if __name__ == '__main__':
+    with app.app_context():
+        # 데이터베이스 테이블 생성
+        db.create_all()
+        # 부트캠프 데이터 초기화
+        init_bootcamps()
+    
     # 서버 시작 (환경 변수에서 포트 가져오기)
     port = int(os.environ.get('PORT', 10000))
     app.run(host='0.0.0.0', debug=True, port=port)
