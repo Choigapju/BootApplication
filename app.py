@@ -22,22 +22,20 @@ DB_PORT = os.getenv("DB_PORT")  # 기본값 5432
 DB_NAME = os.getenv("DB_NAME")
 
 # 연결 문자열 만들기 전 유효성 검사
-DATABASE_URL = None  # 변수 초기화
-if not all([DB_USERNAME, DB_PASSWORD, DB_HOST, DB_NAME]):
-    print("경고: 필수 데이터베이스 환경 변수가 설정되지 않았습니다!")
-    # 환경 변수에서 DATABASE_URL 직접 가져오기 시도
-    DATABASE_URL = os.environ.get('DATABASE_URL')
-    if not DATABASE_URL:
-        print("DATABASE_URL 환경 변수도 없습니다. SQLite 기본값을 사용합니다.")
-else:
-    # 유효한 포트 확인
-    try:
-        port = int(DB_PORT)
-    except ValueError:
-        print(f"경고: 잘못된 포트 번호 '{DB_PORT}', 기본값 5432로 설정합니다.")
-        port = 5432
-        
-    DATABASE_URL = f"postgresql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{port}/{DB_NAME}"
+DATABASE_URL = os.environ.get('DATABASE_URL')  # 먼저 DATABASE_URL 확인
+
+if not DATABASE_URL:  # DATABASE_URL이 없는 경우에만 개별 변수 확인
+    if not all([DB_USERNAME, DB_PASSWORD, DB_HOST, DB_NAME]):
+        print("경고: 데이터베이스 연결 정보가 설정되지 않았습니다!")
+    else:
+        # 유효한 포트 확인
+        try:
+            port = int(DB_PORT)
+        except ValueError:
+            print(f"경고: 잘못된 포트 번호 '{DB_PORT}', 기본값 5432로 설정합니다.")
+            port = 5432
+            
+        DATABASE_URL = f"postgresql://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOST}:{port}/{DB_NAME}"
 
 print(f"사용되는 DATABASE_URL: {DATABASE_URL}")
 
