@@ -653,8 +653,35 @@
         let reasonBarChart = null; // 이유 막대 차트 객체
         let activeStudentId = null; // 상태 변경 중인 학생 ID
 
-        // API URL (Flask로 변경된 서버 포트로 설정)
-        const API_URL = window.location.protocol + '//' + window.location.hostname + ':10000/api';
+        // API URL (환경에 따라 자동으로 포트 감지)
+        const API_URL = (() => {
+            // 기본 API 경로
+            const apiPath = '/api';
+            
+            // 현재 URL 정보
+            const protocol = window.location.protocol;
+            const hostname = window.location.hostname;
+            const port = window.location.port;
+            
+            // 로컬 개발 환경 (localhost)
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                // 로컬에서는 포트 3000 사용
+                return `${protocol}//${hostname}:3000${apiPath}`;
+            } 
+            // 배포 환경 (Render 등)
+            else {
+                // 포트가 있으면 해당 API 서버는 포트 10000을 사용 중
+                if (port) {
+                    return `${protocol}//${hostname}:10000${apiPath}`;
+                }
+                // 포트가 없는 경우 (SSL 등), API 서버도 동일 도메인의 포트 10000 사용
+                else {
+                    return `${protocol}//${hostname}:10000${apiPath}`;
+                }
+            }
+        })();
+        
+        console.log('Using API URL:', API_URL);
 
         // 상태 옵션과 설명
         const statusOptions = {
