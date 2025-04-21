@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KDT 교육 지원자 관리 시스템</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
@@ -13,7 +14,7 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', sans-serif;
         }
 
         body {
@@ -26,7 +27,7 @@
 
         /* 헤더 스타일 */
         header {
-            background-color: white;
+            background-color: #3b82f6;
             padding: 1rem;
             border-bottom: 1px solid #ddd;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -35,7 +36,40 @@
         h1 {
             font-size: 1.5rem;
             font-weight: bold;
-            color: #333;
+            color: white;
+        }
+
+        /* 대시보드 영역 */
+        .dashboard {
+            display: flex;
+            background-color: white;
+            padding: 1rem;
+            border-bottom: 1px solid #ddd;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        /* 통계 컨테이너 */
+        .stats-container {
+            flex: 1;
+            min-width: 250px;
+            margin-bottom: 1rem;
+            background-color: #f9fafb;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        /* 차트 컨테이너 */
+        .chart-container {
+            flex: 1;
+            height: 220px;
+            min-width: 300px;
+            margin-bottom: 1rem;
+            background-color: #f9fafb;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
         /* 메인 레이아웃 */
@@ -43,23 +77,18 @@
             display: flex;
             flex: 1;
             overflow: hidden;
+            flex-direction: column;
         }
 
-        /* 사이드바 스타일 */
-        .sidebar {
-            width: 300px;
-            background-color: white;
-            border-right: 1px solid #ddd;
-            padding: 1rem;
+        /* 메인 컨텐츠 영역 */
+        .content {
+            flex: 1;
             display: flex;
             flex-direction: column;
-            overflow-y: auto;
+            overflow: hidden;
         }
 
-        .stats-container {
-            margin-bottom: 1.5rem;
-        }
-
+        /* 통계 아이템 스타일 */
         .stats-container h2 {
             font-size: 1.1rem;
             margin-bottom: 0.5rem;
@@ -70,19 +99,6 @@
             display: flex;
             justify-content: space-between;
             margin-bottom: 0.5rem;
-        }
-
-        .chart-container {
-            margin-bottom: 1.5rem;
-            height: 200px;
-        }
-
-        /* 메인 컨텐츠 영역 */
-        .content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
         }
 
         /* 툴바 스타일 */
@@ -489,8 +505,8 @@
 
     <!-- 메인 컨테이너 -->
     <div class="main-container">
-        <!-- 사이드바 -->
-        <div class="sidebar">
+        <!-- 대시보드 영역 -->
+        <div class="dashboard">
             <!-- 통계 영역 -->
             <div class="stats-container">
                 <h2>현황</h2>
