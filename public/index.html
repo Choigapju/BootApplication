@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KDT 교육 지원자 관리 시스템</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
-    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
@@ -14,7 +13,7 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', sans-serif;
+            font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
         }
 
         body {
@@ -36,40 +35,7 @@
         h1 {
             font-size: 1.5rem;
             font-weight: bold;
-            color: white;
-        }
-
-        /* 대시보드 영역 */
-        .dashboard {
-            display: flex;
-            background-color: white;
-            padding: 1rem;
-            border-bottom: 1px solid #ddd;
-            gap: 1.5rem;
-            flex-wrap: wrap;
-        }
-
-        /* 통계 컨테이너 */
-        .stats-container {
-            flex: 1;
-            min-width: 250px;
-            margin-bottom: 1rem;
-            background-color: #f9fafb;
-            padding: 1rem;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-
-        /* 차트 컨테이너 */
-        .chart-container {
-            flex: 1;
-            height: 220px;
-            min-width: 300px;
-            margin-bottom: 1rem;
-            background-color: #f9fafb;
-            padding: 1rem;
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            color: #333;
         }
 
         /* 메인 레이아웃 */
@@ -77,7 +43,38 @@
             display: flex;
             flex: 1;
             overflow: hidden;
+        }
+
+        /* 사이드바 스타일 */
+        .sidebar {
+            width: 300px;
+            background-color: #FFFAF5;
+            border-right: 1px solid #ddd;
+            padding: 1rem;
+            display: flex;
             flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .stats-container {
+            margin-bottom: 1.5rem;
+        }
+
+        .stats-container h2 {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .chart-container {
+            margin-bottom: 1.5rem;
+            height: 200px;
         }
 
         /* 메인 컨텐츠 영역 */
@@ -86,20 +83,6 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
-        }
-
-        /* 통계 아이템 스타일 */
-        .stats-container h2 {
-            font-size: 1.1rem;
-            margin-bottom: 0.5rem;
-            font-weight: 600;
-            color: #FF7710;
-        }
-
-        .stat-item {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 0.5rem;
         }
 
         /* 툴바 스타일 */
@@ -114,7 +97,7 @@
         }
 
         .upload-btn {
-            background-color: #FF7710;
+            background-color: #3b82f6;
             color: white;
             border: none;
             padding: 0.5rem 1rem;
@@ -127,7 +110,7 @@
         }
 
         .upload-btn:hover {
-            background-color: #E66700;
+            background-color: #2563eb;
         }
 
         .search-container {
@@ -151,8 +134,8 @@
 
         .search-input:focus {
             outline: none;
-            border-color: #FF7710;
-            box-shadow: 0 0 0 3px rgba(255, 119, 16, 0.3);
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
         }
 
         /* 부트캠프 선택기 스타일 */
@@ -174,7 +157,7 @@
         }
         
         .bootcamp-dropdown:hover {
-            border-color: #FF7710;
+            border-color: #3b82f6;
         }
         
         .bootcamp-menu {
@@ -203,7 +186,7 @@
         }
         
         .bootcamp-item:hover {
-            background-color: #FFF0E6;
+            background-color: #f3f4f6;
         }
 
         /* 오른쪽 요소들을 그룹화 */
@@ -231,12 +214,12 @@
         }
 
         .tab-btn:hover {
-            color: #FF7710;
+            color: #111827;
         }
 
         .tab-btn.active {
-            color: #FF7710;
-            border-bottom: 2px solid #FF7710;
+            color: #2563eb;
+            border-bottom: 2px solid #2563eb;
         }
 
         /* 테이블 스타일 */
@@ -325,24 +308,12 @@
             font-size: 0.875rem;
         }
 
-        .note-input:focus {
-            outline: none;
-            border-color: #FF7710;
-            box-shadow: 0 0 0 2px rgba(255, 119, 16, 0.2);
-        }
-
         .status-select {
             width: 100%;
             padding: 0.375rem 0.5rem;
             border: 1px solid #ddd;
             border-radius: 0.25rem;
             font-size: 0.875rem;
-        }
-        
-        .status-select:focus {
-            outline: none;
-            border-color: #FF7710;
-            box-shadow: 0 0 0 2px rgba(255, 119, 16, 0.2);
         }
 
         /* 모달 스타일 */
@@ -414,7 +385,7 @@
         }
 
         .btn-confirm {
-            background-color: #FF7710;
+            background-color: #3b82f6;
             color: white;
         }
 
@@ -439,7 +410,7 @@
 
         .loader {
             border: 4px solid #f3f3f3;
-            border-top: 4px solid #FF7710;
+            border-top: 4px solid #3498db;
             border-radius: 50%;
             width: 40px;
             height: 40px;
@@ -459,12 +430,12 @@
 
         .phone-icon {
             margin-left: 0.5rem;
-            color: #FF7710;
+            color: #3b82f6;
             cursor: pointer;
         }
 
         .phone-icon:hover {
-            color: #E66700;
+            color: #2563eb;
         }
     </style>
 </head>
@@ -518,8 +489,8 @@
 
     <!-- 메인 컨테이너 -->
     <div class="main-container">
-        <!-- 대시보드 영역 -->
-        <div class="dashboard">
+        <!-- 사이드바 -->
+        <div class="sidebar">
             <!-- 통계 영역 -->
             <div class="stats-container">
                 <h2>현황</h2>
@@ -653,35 +624,8 @@
         let reasonBarChart = null; // 이유 막대 차트 객체
         let activeStudentId = null; // 상태 변경 중인 학생 ID
 
-        // API URL (환경에 따라 자동으로 포트 감지)
-        const API_URL = (() => {
-            // 기본 API 경로
-            const apiPath = '/api';
-            
-            // 현재 URL 정보
-            const protocol = window.location.protocol;
-            const hostname = window.location.hostname;
-            const port = window.location.port;
-            
-            // 로컬 개발 환경 (localhost)
-            if (hostname === 'localhost' || hostname === '127.0.0.1') {
-                // 로컬에서는 포트 3000 사용
-                return `${protocol}//${hostname}:3000${apiPath}`;
-            } 
-            // 배포 환경 (Render 등)
-            else {
-                // 포트가 있으면 해당 API 서버는 포트 10000을 사용 중
-                if (port) {
-                    return `${protocol}//${hostname}:10000${apiPath}`;
-                }
-                // 포트가 없는 경우 (SSL 등), API 서버도 동일 도메인의 포트 10000 사용
-                else {
-                    return `${protocol}//${hostname}:10000${apiPath}`;
-                }
-            }
-        })();
-        
-        console.log('Using API URL:', API_URL);
+        // API URL (배포 환경에 맞게 조정 필요)
+        const API_URL = window.location.origin + '/api';
 
         // 상태 옵션과 설명
         const statusOptions = {
@@ -845,11 +789,6 @@
             } catch (error) {
                 console.error('데이터 가져오기 오류:', error);
                 loaderContainer.style.display = 'none';
-                
-                // 개발 환경에서는 더미 데이터로 폴백
-                if (students.length === 0) {
-                    generateDummyData(30);
-                }
             }
         }
 
@@ -869,7 +808,7 @@
                     ? `${API_URL}/upload`
                     : `${API_URL}/bootcamps/${currentBootcamp}/upload`;
                 
-                const response = await fetch(uploadUrl, {
+                    const response = await fetch(uploadUrl, {
                     method: 'POST',
                     body: formData
                 });
@@ -897,83 +836,6 @@
             
             // 파일 입력 초기화
             event.target.value = '';
-        }
-
-        // 더미 데이터 생성 (개발용)
-        function generateDummyData(count) {
-            const statuses = ['applying', 'accepted', 'considering', 'registered', 'canceled'];
-            const genders = ['남', '여'];
-            const names = ['김민수', '이지현', '박준호', '최수진', '정재원', '윤소희', '강대현', '황미나', '조성민', '한예은'];
-            
-            students = Array.from({ length: count }, (_, index) => {
-                const status = statuses[Math.floor(Math.random() * 5)];
-                let consideringReason = null;
-                
-                if (status === 'considering') {
-                    const reasonIndex = Math.floor(Math.random() * consideringReasons.length);
-                    consideringReason = consideringReasons[reasonIndex].value;
-                }
-                
-                return {
-                    id: index + 1,
-                    name: names[Math.floor(Math.random() * names.length)],
-                    gender: genders[Math.floor(Math.random() * 2)],
-                    age: Math.floor(Math.random() * 20) + 20,
-                    phone: `010-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`,
-                    email: `user${index+1}@example.com`,
-                    status,
-                    consideringReason,
-                    lastContactDate: new Date(Date.now() - Math.floor(Math.random() * 10) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                    notes: '',
-                    updatedAt: new Date().toISOString()
-                };
-            });
-            
-            // 초기 필터링 및 렌더링
-            filteredStudents = [...students];
-            renderStudentTable();
-            updateStats();
-            updateCharts();
-        }
-
-        // 부트캠프별 더미 데이터 생성 함수
-        function generateDummyDataForBootcamp(bootcampName, count) {
-            // 기존 generateDummyData 함수와 유사하지만 부트캠프명 추가
-            const statuses = ['applying', 'accepted', 'considering', 'registered', 'canceled'];
-            const genders = ['남', '여'];
-            const names = ['김민수', '이지현', '박준호', '최수진', '정재원', '윤소희', '강대현', '황미나', '조성민', '한예은'];
-            
-            students = Array.from({ length: count }, (_, index) => {
-                const status = statuses[Math.floor(Math.random() * 5)];
-                let consideringReason = null;
-                
-                if (status === 'considering') {
-                    const reasonIndex = Math.floor(Math.random() * consideringReasons.length);
-                    consideringReason = consideringReasons[reasonIndex].value;
-                }
-                
-                return {
-                    id: index + 1,
-                    name: names[Math.floor(Math.random() * names.length)],
-                    gender: genders[Math.floor(Math.random() * 2)],
-                    age: Math.floor(Math.random() * 20) + 20,
-                    phone: `010-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`,
-                    email: `user${index+1}@example.com`,
-                    status,
-                    bootcamp: bootcampName, // 부트캠프명 추가
-                    bootcampId: currentBootcamp, // 부트캠프 ID 추가
-                    consideringReason,
-                    lastContactDate: new Date(Date.now() - Math.floor(Math.random() * 10) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                    notes: '',
-                    updatedAt: new Date().toISOString()
-                };
-            });
-            
-            // 화면 업데이트
-            filteredStudents = [...students];
-            renderStudentTable();
-            updateStats();
-            updateCharts();
         }
 
         // 검색 처리 함수
@@ -1312,20 +1174,12 @@
                     datasets: [{
                         data: [0, 0, 0, 0, 0],
                         backgroundColor: [
-                            '#ddd6fe', // 지원중 (보라색)
-                            '#bfdbfe', // 합격 처리 (파란색)
-                            '#fef3c7', // 고민중 (노란색)
-                            '#bbf7d0', // HRD 최종 등록 (초록색)
-                            '#fee2e2'  // 수강 취소 (빨간색)
-                        ],
-                        borderColor: [
-                            '#5b21b6', // 지원중
-                            '#1e40af', // 합격 처리
-                            '#92400e', // 고민중
-                            '#166534', // HRD 최종 등록
-                            '#b91c1c'  // 수강 취소
-                        ],
-                        borderWidth: 1
+                            '#8884d8', // 지원중
+                            '#83a6ed', // 합격 처리
+                            '#ffc658', // 고민중
+                            '#82ca9d', // HRD 최종 등록
+                            '#ff8042'  // 수강 취소
+                        ]
                     }]
                 },
                 options: {
@@ -1354,9 +1208,7 @@
                     datasets: [{
                         label: '인원수',
                         data: [0, 0, 0, 0, 0],
-                        backgroundColor: '#FFCB8C',
-                        borderColor: '#FF7710',
-                        borderWidth: 1
+                        backgroundColor: '#ffc658'
                     }]
                 },
                 options: {
@@ -1420,11 +1272,6 @@
 
         // 페이지 로드 시 초기화
         document.addEventListener('DOMContentLoaded', init);
-        
-        // 전역 함수 정의 (HTML에서 직접 호출 가능하도록)
-        window.handleStatusChange = handleStatusChange;
-        window.handleNoteChange = handleNoteChange;
-        window.callStudent = callStudent;
     </script>
 </body>
 </html>
