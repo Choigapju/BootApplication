@@ -592,8 +592,10 @@
         let reasonBarChart = null; // 이유 막대 차트 객체
         let activeStudentId = null; // 상태 변경 중인 학생 ID
 
-        // API URL (Flask로 변경된 서버 포트로 설정)
-        const API_URL = window.location.protocol + '//' + window.location.hostname + ':10000/api';
+        // API URL 설정
+        const API_URL = window.location.hostname === 'localhost' 
+            ? 'http://localhost:10000/api'
+            : 'https://bootapplication-test.onrender.com/api';  // 실제 배포된 백엔드 URL로 변경해주세요
 
         // 상태 옵션과 설명
         const statusOptions = {
