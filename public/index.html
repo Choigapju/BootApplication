@@ -658,6 +658,8 @@
         let filteredStudents = []; // 필터링된 학생 데이터
         let currentTab = 'all'; // 현재 선택된 탭
         let currentBootcamp = 'all'; // 현재 선택된 부트캠프
+        let currentBatch = null; // 현재 선택된 기수
+        let bootcamps = []; // 부트캠프 데이터
         let statusPieChart = null; // 상태 파이 차트 객체
         let reasonBarChart = null; // 이유 막대 차트 객체
         let activeStudentId = null; // 상태 변경 중인 학생 ID
@@ -665,7 +667,7 @@
         // API URL 설정
         const API_URL = window.location.hostname === 'localhost' 
             ? 'http://localhost:10000/api'
-            : 'https://bootapplication-test.onrender.com/api';  // 실제 배포된 백엔드 URL로 변경해주세요
+            : 'https://bootapplication-test.onrender.com/api';
 
         // 상태 옵션과 설명
         const statusOptions = {
@@ -736,75 +738,112 @@
                 }
             });
 
-            // 서버에서 학생 데이터 가져오기
-            fetchStudents();
+            // 부트캠프 데이터 로드
+            fetchBootcamps();
             
             // 차트 초기화
             initCharts();
         }
 
-        // 현재 선택된 부트캠프 값 가져오기
-        function getCurrentBootcampValue() {
-            return currentBootcamp;
-        }
-
-        // 부트캠프 변경 시 호출되는 함수
-        function changeBootcamp(bootcampValue) {
-            currentBootcamp = bootcampValue;
-            console.log('선택된 부트캠프:', bootcampValue);
-            
-            // 부트캠프별 데이터 로드 또는 필터링 로직
-            if (bootcampValue === 'all') {
-                // 전체 부트캠프 데이터 로드
-                fetchAllBootcampData();
-            } else {
-                // 특정 부트캠프 데이터 로드
-                fetchBootcampData(bootcampValue);
+        // 부트캠프 데이터 가져오기
+        async function fetchBootcamps() {
+            try {
+                const response = await fetch(`${API_URL}/bootcamps`);
+                if (!response.ok) {
+                    throw new Error('부트캠프 데이터를 가져오는데 실패했습니다.');
+                }
+                bootcamps = await response.json();
+                updateBootcampDropdown();
+            } catch (error) {
+                console.error('부트캠프 데이터 로딩 오류:', error);
+                // 개발용 더미 데이터
+                bootcamps = [
+                    { id: 'frontend-1', name: '프론트엔드', batch_number: 1, recruitment_start_date: '2024-01-01', recruitment_end_date: '2024-12-31' },
+                    { id: 'frontend-2', name: '프론트엔드', batch_number: 2, recruitment_start_date: '2024-01-01', recruitment_end_date: '2024-12-31' },
+                    { id: 'backend-1', name: '백엔드', batch_number: 1, recruitment_start_date: '2024-01-01', recruitment_end_date: '2024-12-31' },
+                    { id: 'ios-1', name: 'iOS 개발', batch_number: 1, recruitment_start_date: '2024-01-01', recruitment_end_date: '2024-12-31' }
+                ];
+                updateBootcampDropdown();
             }
         }
 
-        // 전체 부트캠프 데이터 로드 함수
-        function fetchAllBootcampData() {
-            // 기존 fetchStudents 함수 호출 또는 유사한 로직
-            fetchStudents();
+        // 부트캠프 드롭다운 업데이트
+        function updateBootcampDropdown() {
+            const bootcampMenu = document.getElementById('bootcampMenu');
+            const currentDate = new Date();
+            
+            // 전체 부트캠프 옵션 추가
+            bootcampMenu.innerHTML = '<div class="bootcamp-item" data-value="all">전체 부트캠프</div>';
+            
+            // 현재 모집 중인 부트캠프만 필터링
+            const activeBootcamps = bootcamps.filter(bootcamp => {
+                const startDate = new Date(bootcamp.recruitment_start_date);
+                const endDate = new Date(bootcamp.recruitment_end_date);
+                return currentDate >= startDate && currentDate <= endDate;
+            });
+            
+            // 부트캠프 기수별로 정렬하여 추가
+            activeBootcamps.forEach(bootcamp => {
+                const item = document.createElement('div');
+                item.className = 'bootcamp-item';
+                item.dataset.value = `${bootcamp.id}`;
+                item.textContent = `${bootcamp.name} ${bootcamp.batch_number}기`;
+                bootcampMenu.appendChild(item);
+            });
+            
+            // 이벤트 리스너 다시 설정
+            const bootcampItems = document.querySelectorAll('.bootcamp-item');
+            bootcampItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    const value = this.dataset.value;
+                    const text = this.textContent;
+                    
+                    document.getElementById('currentBootcamp').textContent = text;
+                    bootcampMenu.classList.remove('show');
+                    
+                    changeBootcamp(value);
+                });
+            });
+        }
+
+        // 부트캠프 변경 시 호출되는 함수
+        async function changeBootcamp(bootcampId) {
+            currentBootcamp = bootcampId;
+            currentBatch = bootcampId === 'all' ? null : bootcampId;
+            
+            try {
+                if (bootcampId === 'all') {
+                    await fetchAllBootcampData();
+                } else {
+                    await fetchBootcampData(bootcampId);
+                }
+            } catch (error) {
+                console.error('부트캠프 데이터 변경 오류:', error);
+            }
         }
 
         // 특정 부트캠프 데이터 로드 함수
-        function fetchBootcampData(bootcampValue) {
+        async function fetchBootcampData(bootcampId) {
             loaderContainer.style.display = 'flex';
             
-            // 서버에서 특정 부트캠프의 학생 데이터를 가져오는 로직
-            fetch(`${API_URL}/bootcamps/${bootcampValue}/students`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('부트캠프 데이터를 가져오는 데 실패했습니다.');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    students = data;
-                    filteredStudents = [...students];
-                    renderStudentTable();
-                    updateStats();
-                    updateCharts();
-                    loaderContainer.style.display = 'none';
-                })
-                .catch(error => {
-                    console.error('부트캠프 데이터 가져오기 오류:', error);
-                    loaderContainer.style.display = 'none';
-                    
-                    // 개발 중이라면, 더미 데이터로 테스트
-                    if (bootcampValue === 'frontend') {
-                        // 프론트엔드 부트캠프 더미 데이터
-                        generateDummyDataForBootcamp('프론트엔드', 15);
-                    } else if (bootcampValue === 'backend') {
-                        // 백엔드 부트캠프 더미 데이터
-                        generateDummyDataForBootcamp('백엔드', 12);
-                    } else {
-                        // 기타 부트캠프용 더미 데이터
-                        generateDummyDataForBootcamp(bootcampValue, 10);
-                    }
-                });
+            try {
+                const response = await fetch(`${API_URL}/bootcamps/${bootcampId}/students`);
+                if (!response.ok) {
+                    throw new Error('부트캠프 데이터를 가져오는 데 실패했습니다.');
+                }
+                
+                students = await response.json();
+                filteredStudents = [...students];
+                renderStudentTable();
+                updateStats();
+                updateCharts();
+            } catch (error) {
+                console.error('부트캠프 데이터 가져오기 오류:', error);
+                // 개발용 더미 데이터 생성
+                generateDummyDataForBootcamp(bootcampId, 10);
+            } finally {
+                loaderContainer.style.display = 'none';
+            }
         }
 
         // 서버에서 학생 데이터 가져오기
