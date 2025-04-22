@@ -419,6 +419,56 @@
         .upload-btn:hover::before {
             left: 100%;
         }
+
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid #eee;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            background: white;
+        }
+
+        .tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            padding: 0.625rem 1.25rem;
+            border-radius: 999px;
+            color: #666;
+            font-size: 0.925rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tab-btn span {
+            color: #ff6b00;
+            font-weight: 600;
+        }
+
+        .tab-btn:hover {
+            background-color: #fff8f3;
+            color: #ff6b00;
+        }
+
+        .tab-btn.active {
+            background-color: #fff0e6;
+            color: #ff6b00;
+        }
+
+        .tab-btn.active span {
+            color: #ff6b00;
+        }
     </style>
 </head>
 <body>
@@ -569,12 +619,12 @@
 
             <!-- 탭 메뉴 -->
             <div class="tabs">
-                <button class="tab-btn active" data-tab="all">전체 (<span id="tabTotalCount">0</span>)</button>
-                <button class="tab-btn" data-tab="applying">지원중 (<span id="tabApplyingCount">0</span>)</button>
-                <button class="tab-btn" data-tab="accepted">합격 처리 (<span id="tabAcceptedCount">0</span>)</button>
-                <button class="tab-btn" data-tab="considering">고민중 (<span id="tabConsideringCount">0</span>)</button>
-                <button class="tab-btn" data-tab="registered">HRD 최종 등록 (<span id="tabRegisteredCount">0</span>)</button>
-                <button class="tab-btn" data-tab="canceled">수강 취소 (<span id="tabCanceledCount">0</span>)</button>
+                <button class="tab-btn active" data-tab="all">전체 <span id="tabTotalCount">0</span></button>
+                <button class="tab-btn" data-tab="applying">지원중 <span id="tabApplyingCount">0</span></button>
+                <button class="tab-btn" data-tab="accepted">합격 처리 <span id="tabAcceptedCount">0</span></button>
+                <button class="tab-btn" data-tab="considering">고민중 <span id="tabConsideringCount">0</span></button>
+                <button class="tab-btn" data-tab="registered">HRD 최종 등록 <span id="tabRegisteredCount">0</span></button>
+                <button class="tab-btn" data-tab="canceled">수강 취소 <span id="tabCanceledCount">0</span></button>
             </div>
 
             <!-- 테이블 영역 -->
