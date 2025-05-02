@@ -71,6 +71,7 @@ class Student(db.Model):
     phone = db.Column(db.String(20), unique=True, nullable=False)
     email = db.Column(db.String(100))
     bootcamp_id = db.Column(db.String(50))
+    batch_number = db.Column(db.Integer)
     status = db.Column(db.String(20), default='applying')
     considering_reason = db.Column(db.String(50))
     last_contact_date = db.Column(db.Date, default=datetime.datetime.now().date())
@@ -86,6 +87,7 @@ class Student(db.Model):
             'phone': self.phone,
             'email': self.email,
             'bootcampId': self.bootcamp_id,
+            'batchNumber': self.batch_number,
             'status': self.status,
             'consideringReason': self.considering_reason,
             'lastContactDate': self.last_contact_date.strftime('%Y-%m-%d') if self.last_contact_date else None,
@@ -234,23 +236,19 @@ def init_bootcamps():
     
     return [bootcamp.to_dict() for bootcamp in Bootcamp.query.all()]
 
-def parse_csv(file_path, bootcamp_id=None):
+def parse_csv(file_path, bootcamp_id=None, batch_number=None):
     """CSV 파일 파싱"""
     results = []
     try:
-        # pandas로 CSV 파일 읽기
         df = pd.read_csv(file_path, header=None, skiprows=1)
         
-        # 각 행 처리
         for _, row in df.iterrows():
-            # 인덱스 기반 접근 (H, I, J, K, L 열)
-            if len(row) < 8:  # 최소한의 데이터가 있어야 함
+            if len(row) < 8:
                 continue
             
             name = row.iloc[7] if len(row) > 7 and pd.notna(row.iloc[7]) else None
             phone = row.iloc[8] if len(row) > 8 and pd.notna(row.iloc[8]) else None
             
-            # 이름이나 전화번호가 없는 경우 건너뛰기
             if not name or not phone:
                 continue
                 
@@ -258,32 +256,26 @@ def parse_csv(file_path, bootcamp_id=None):
             birthdate = row.iloc[10] if len(row) > 10 and pd.notna(row.iloc[10]) else None
             gender_data = row.iloc[11] if len(row) > 11 and pd.notna(row.iloc[11]) else None
             
-            # 전화번호 형식 표준화
             formatted_phone = format_phone(phone)
-            
-            # 나이 계산
             age = get_age(birthdate)
-            
-            # 성별 결정
             gender = determine_gender(name, gender_data)
             
-            # 기존 학생 확인
             existing_student = Student.query.filter_by(phone=formatted_phone).first()
             
             if existing_student:
-                # 기존 학생 업데이트
                 existing_student.name = name
                 existing_student.gender = gender
                 existing_student.age = age
                 existing_student.email = email if email else ''
                 
-                if bootcamp_id and not existing_student.bootcamp_id:
+                if bootcamp_id:
                     existing_student.bootcamp_id = bootcamp_id
+                if batch_number is not None:
+                    existing_student.batch_number = batch_number
                 
                 db.session.add(existing_student)
                 results.append(existing_student.to_dict())
             else:
-                # 새 학생 생성
                 student = Student(
                     name=name,
                     gender=gender,
@@ -291,11 +283,12 @@ def parse_csv(file_path, bootcamp_id=None):
                     phone=formatted_phone,
                     email=email if email else '',
                     bootcamp_id=bootcamp_id,
+                    batch_number=batch_number,
                     status="applying",
                     last_contact_date=datetime.datetime.now().date()
                 )
                 db.session.add(student)
-                db.session.flush()  # ID 생성을 위한 flush
+                db.session.flush()
                 results.append(student.to_dict())
         
         db.session.commit()
@@ -304,7 +297,6 @@ def parse_csv(file_path, bootcamp_id=None):
         db.session.rollback()
         print(f"CSV 파싱 오류: {e}")
         
-    # 완료 후 파일 삭제
     try:
         os.remove(file_path)
     except:
@@ -312,7 +304,7 @@ def parse_csv(file_path, bootcamp_id=None):
         
     return results
 
-def parse_excel(file_path, bootcamp_id=None):
+def parse_excel(file_path, bootcamp_id=None, batch_number=None):
     """Excel 파일 파싱"""
     results = []
     try:
@@ -367,6 +359,8 @@ def parse_excel(file_path, bootcamp_id=None):
                 
                 if bootcamp_id and not existing_student.bootcamp_id:
                     existing_student.bootcamp_id = bootcamp_id
+                if batch_number is not None:
+                    existing_student.batch_number = batch_number
                 
                 db.session.add(existing_student)
                 results.append(existing_student.to_dict())
@@ -379,6 +373,7 @@ def parse_excel(file_path, bootcamp_id=None):
                     phone=formatted_phone,
                     email=email if email else '',
                     bootcamp_id=bootcamp_id,
+                    batch_number=batch_number,
                     status="applying",
                     last_contact_date=datetime.datetime.now().date()
                 )
@@ -400,12 +395,11 @@ def parse_excel(file_path, bootcamp_id=None):
         
     return results
 
-# 파일명에서 부트캠프 정보 추출하는 함수 추가
+# 파일명에서 부트캠프와 기수 정보를 추출하는 함수 수정
 def detect_bootcamp_from_filename(filename):
-    """파일명에서 부트캠프 정보 추출"""
+    """파일명에서 부트캠프와 기수 정보 추출"""
     print(f"\n=== 파일명 분석 시작: {filename} ===")
     
-    # 파일명에서 부트캠프 정보 추출
     bootcamp_patterns = {
         'frontend': ['프론트엔드', 'frontend', 'front'],
         'backend': ['백엔드', 'backend', 'back'],
@@ -416,7 +410,7 @@ def detect_bootcamp_from_filename(filename):
         'startup': ['startup', '스타트업'],
         'shortterm': ['shortterm', '단기'],
         'ai-service': ['ai-service', 'ai서비스'],
-        'game': ['game', '게임'],
+        'game': ['game', '게임', '유니티'],
         'cloud': ['cloud', '클라우드'],
         'ai': ['ai', '에이아이'],
         'blockchain': ['blockchain', '블록체인'],
@@ -425,13 +419,15 @@ def detect_bootcamp_from_filename(filename):
     
     filename_lower = filename.lower()
     detected_bootcamp = None
+    batch_number = None
     
     # kdt- 접두사가 있는 경우 처리
     if 'kdt-' in filename_lower:
         parts = filename_lower.split('_')[0].split('-')
-        if len(parts) >= 2:
-            bootcamp_name = parts[1]  # kdt-growth-2nd에서 growth 추출
-            print(f"KDT 형식에서 추출된 부트캠프명: {bootcamp_name}")
+        if len(parts) >= 3:  # kdt-growth-2nd 형식 처리
+            bootcamp_name = parts[1]  # growth
+            batch_info = parts[2]  # 2nd
+            print(f"KDT 형식에서 추출된 정보: 부트캠프={bootcamp_name}, 기수={batch_info}")
             
             # 부트캠프 매칭
             for bootcamp_id, patterns in bootcamp_patterns.items():
@@ -439,9 +435,21 @@ def detect_bootcamp_from_filename(filename):
                     detected_bootcamp = bootcamp_id
                     print(f"매칭된 부트캠프 ID: {detected_bootcamp}")
                     break
+            
+            # 기수 정보 추출
+            if 'st' in batch_info or 'nd' in batch_info or 'rd' in batch_info or 'th' in batch_info:
+                try:
+                    batch_number = int(''.join(filter(str.isdigit, batch_info)))
+                    print(f"추출된 기수: {batch_number}")
+                except ValueError:
+                    print("기수 추출 실패")
+                    batch_number = 1
+            elif batch_info.isdigit():
+                batch_number = int(batch_info)
+                print(f"추출된 기수: {batch_number}")
     
-    print(f"=== 파일명 분석 완료: {detected_bootcamp} ===\n")
-    return detected_bootcamp
+    print(f"=== 파일명 분석 완료: 부트캠프={detected_bootcamp}, 기수={batch_number} ===\n")
+    return detected_bootcamp, batch_number
 
 # 라우트 정의
 @app.route('/')
@@ -465,20 +473,25 @@ def upload_file():
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
         
-        # 파일명에서 부트캠프 정보 추출
-        bootcamp_id = detect_bootcamp_from_filename(filename)
-        print(f"파일 '{filename}'에서 감지된 부트캠프: {bootcamp_id}")
+        # 파일명에서 부트캠프와 기수 정보 추출
+        bootcamp_id, batch_number = detect_bootcamp_from_filename(filename)
+        print(f"파일 '{filename}'에서 감지된 정보: 부트캠프={bootcamp_id}, 기수={batch_number}")
         
         file_ext = os.path.splitext(filename)[1].lower()
         
         if file_ext == '.csv':
-            parsed_data = parse_csv(file_path, bootcamp_id)
+            parsed_data = parse_csv(file_path, bootcamp_id, batch_number)
         elif file_ext in ['.xlsx', '.xls']:
-            parsed_data = parse_excel(file_path, bootcamp_id)
+            parsed_data = parse_excel(file_path, bootcamp_id, batch_number)
         else:
             return jsonify({"error": "지원되지 않는 파일 형식입니다."}), 400
             
-        return jsonify({"success": True, "count": len(parsed_data), "bootcamp": bootcamp_id})
+        return jsonify({
+            "success": True, 
+            "count": len(parsed_data), 
+            "bootcamp": bootcamp_id,
+            "batchNumber": batch_number
+        })
     
     return jsonify({"error": "지원되지 않는 파일 형식입니다."}), 400
 
@@ -561,8 +574,8 @@ def upload_bootcamp_file(bootcamp_id):
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
         
-        # 파일명에서 부트캠프 정보 추출
-        detected_bootcamp = detect_bootcamp_from_filename(filename)
+        # 파일명에서 부트캠프와 기수 정보 추출
+        detected_bootcamp, batch_number = detect_bootcamp_from_filename(filename)
         
         # 감지된 부트캠프가 있으면 해당 부트캠프로 저장, 없으면 URL의 부트캠프 ID 사용
         actual_bootcamp_id = detected_bootcamp if detected_bootcamp else bootcamp_id
@@ -571,9 +584,9 @@ def upload_bootcamp_file(bootcamp_id):
         file_ext = os.path.splitext(filename)[1].lower()
         
         if file_ext == '.csv':
-            parsed_data = parse_csv(file_path, actual_bootcamp_id)
+            parsed_data = parse_csv(file_path, actual_bootcamp_id, batch_number)
         elif file_ext in ['.xlsx', '.xls']:
-            parsed_data = parse_excel(file_path, actual_bootcamp_id)
+            parsed_data = parse_excel(file_path, actual_bootcamp_id, batch_number)
         else:
             return jsonify({"error": "지원되지 않는 파일 형식입니다."}), 400
             
