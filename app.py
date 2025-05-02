@@ -256,13 +256,10 @@ def detect_bootcamp_from_filename(filename):
         'android': ['android'],
         'data': ['data'],
         'uxui': ['design', 'uxui'],
-        'startup': ['startup'],
-        'shortterm': ['shortterm'],
-        'ai-service': ['ai-service'],
+        'aiw': ['aiw'],
         'game': ['ugm', 'game'],
         'cloud': ['cloud'],
         'ai': ['ai'],
-        'blockchain': ['blockchain'],
         'growth': ['growth']
     }
     
