@@ -304,7 +304,10 @@ def parse_csv(file_path, bootcamp_id=None, batch_number=None):
     """CSV 파일 파싱"""
     results = []
     try:
-        print(f"CSV 파싱 시작: bootcamp_id={bootcamp_id}, batch_number={batch_number}")
+        print(f"\n=== CSV 파싱 시작 ===")
+        print(f"파일 경로: {file_path}")
+        print(f"부트캠프 ID: {bootcamp_id}")
+        print(f"기수: {batch_number}")
         
         if not bootcamp_id:
             raise ValueError("부트캠프 ID가 필요합니다.")
@@ -314,61 +317,80 @@ def parse_csv(file_path, bootcamp_id=None, batch_number=None):
         if not bootcamp:
             raise ValueError(f"존재하지 않는 부트캠프입니다: {bootcamp_id}")
         
-        df = pd.read_csv(file_path, header=None, skiprows=1)
+        # CSV 파일 읽기
+        print("CSV 파일 읽기 시작...")
+        df = pd.read_csv(file_path, encoding='utf-8')
+        print(f"CSV 파일 행 수: {len(df)}")
+        print(f"CSV 컬럼: {df.columns.tolist()}")
         
-        for _, row in df.iterrows():
+        # 데이터 처리
+        for index, row in df.iterrows():
             try:
-                if len(row) < 8:
-                    continue
+                print(f"\n처리 중인 행 {index + 1}:")
+                print(f"행 데이터: {row.to_dict()}")
                 
-                name = row.iloc[7] if len(row) > 7 and pd.notna(row.iloc[7]) else None
-                phone = row.iloc[8] if len(row) > 8 and pd.notna(row.iloc[8]) else None
+                # 필수 필드 확인
+                name = str(row['이름']) if pd.notna(row['이름']) else None
+                phone = str(row['연락처']) if pd.notna(row['연락처']) else None
+                
+                print(f"추출된 데이터 - 이름: {name}, 연락처: {phone}")
                 
                 if not name or not phone:
+                    print("필수 데이터 누락, 건너뛰기")
                     continue
                 
-                email = row.iloc[9] if len(row) > 9 and pd.notna(row.iloc[9]) else ''
-                birthdate = row.iloc[10] if len(row) > 10 and pd.notna(row.iloc[10]) else None
-                gender_data = row.iloc[11] if len(row) > 11 and pd.notna(row.iloc[11]) else None
+                # 선택적 필드 처리
+                email = str(row['이메일']) if '이메일' in row and pd.notna(row['이메일']) else ''
+                birthdate = row['생년월일'] if '생년월일' in row and pd.notna(row['생년월일']) else None
+                gender_data = row['성별'] if '성별' in row and pd.notna(row['성별']) else None
                 
+                # 데이터 정제
                 formatted_phone = format_phone(phone)
-                age = get_age(birthdate)
+                age = get_age(birthdate) if birthdate else 0
                 gender = determine_gender(name, gender_data)
                 
-                # 새로운 지원 데이터 생성
+                print(f"정제된 데이터:")
+                print(f"- 전화번호: {formatted_phone}")
+                print(f"- 나이: {age}")
+                print(f"- 성별: {gender}")
+                
+                # 새 학생 데이터 생성
                 student = Student(
                     name=name,
                     gender=gender,
                     age=age,
                     phone=formatted_phone,
-                    email=email if email else '',
-                    bootcamp_id=bootcamp_id,  # 파일명에서 추출한 bootcamp_id 사용
+                    email=email,
+                    bootcamp_id=bootcamp_id,
                     batch_number=batch_number,
                     status="applying",
                     last_contact_date=datetime.datetime.now().date()
                 )
                 
-                print(f"학생 데이터 생성: {name}, bootcamp={bootcamp_id}, batch={batch_number}")
                 db.session.add(student)
                 results.append(student.to_dict())
+                print(f"학생 데이터 생성 완료: {name}")
                 
             except Exception as row_error:
                 print(f"행 처리 중 오류 발생: {row_error}")
                 continue
         
+        # 변경사항 저장
+        print(f"\n데이터베이스에 변경사항 저장 중...")
         db.session.commit()
-        print(f"CSV 파싱 완료: {len(results)}개 데이터 처리됨")
+        print(f"처리 완료: {len(results)}개 데이터 저장됨")
         
     except Exception as e:
         db.session.rollback()
-        print(f"CSV 파싱 오류: {e}")
+        print(f"CSV 파싱 중 오류 발생: {e}")
         raise
     finally:
         try:
             os.remove(file_path)
+            print("임시 파일 삭제 완료")
         except:
-            pass
-        
+            print("임시 파일 삭제 실패")
+    
     return results
 
 # 라우트 정의
@@ -380,26 +402,31 @@ def index():
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
     """파일 업로드 API"""
-    if 'file' not in request.files:
-        return jsonify({"error": "파일이 업로드되지 않았습니다."}), 400
-    
-    file = request.files['file']
-    
-    if file.filename == '':
-        return jsonify({"error": "선택된 파일이 없습니다."}), 400
-    
-    if not file.filename.endswith('.csv'):
-        return jsonify({"error": "CSV 파일만 업로드 가능합니다."}), 400
-    
-    if file and allowed_file(file.filename):
-        try:
+    try:
+        print("\n=== 파일 업로드 시작 ===")
+        
+        if 'file' not in request.files:
+            return jsonify({"error": "파일이 업로드되지 않았습니다."}), 400
+        
+        file = request.files['file']
+        print(f"업로드된 파일명: {file.filename}")
+        
+        if file.filename == '':
+            return jsonify({"error": "선택된 파일이 없습니다."}), 400
+        
+        if not file.filename.endswith('.csv'):
+            return jsonify({"error": "CSV 파일만 업로드 가능합니다."}), 400
+        
+        if file and allowed_file(file.filename):
+            # 파일 저장
             filename = secure_filename(file.filename)
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
+            print(f"파일 저장 완료: {file_path}")
             
-            # 파일명에서 부트캠프와 기수 정보 추출
+            # 부트캠프 정보 추출
             bootcamp_id, batch_number = detect_bootcamp_from_filename(filename)
-            print(f"파일 '{filename}'에서 감지된 정보: 부트캠프={bootcamp_id}, 기수={batch_number}")
+            print(f"파일명에서 추출한 정보: bootcamp_id={bootcamp_id}, batch_number={batch_number}")
             
             if not bootcamp_id:
                 return jsonify({"error": "부트캠프 정보를 파일명에서 추출할 수 없습니다."}), 400
@@ -409,7 +436,9 @@ def upload_file():
             if not bootcamp:
                 return jsonify({"error": f"존재하지 않는 부트캠프입니다: {bootcamp_id}"}), 400
             
+            # CSV 파싱 및 데이터 저장
             parsed_data = parse_csv(file_path, bootcamp_id, batch_number)
+            print(f"파싱 완료: {len(parsed_data)}개 데이터")
             
             return jsonify({
                 "success": True, 
@@ -418,11 +447,11 @@ def upload_file():
                 "batchNumber": batch_number
             })
             
-        except Exception as e:
-            print(f"파일 처리 중 오류 발생: {e}")
-            return jsonify({"error": str(e)}), 500
-    
-    return jsonify({"error": "지원되지 않는 파일 형식입니다."}), 400
+    except Exception as e:
+        print(f"파일 처리 중 오류 발생: {e}")
+        return jsonify({"error": str(e)}), 500
+
+    return jsonify({"error": "처리 중 오류가 발생했습니다."}), 500
 
 @app.route('/api/students', methods=['GET'])
 def get_students():
