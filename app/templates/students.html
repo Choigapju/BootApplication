@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- 현황 섹션 -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="status-section">
+            <h5 class="section-title">현황</h5>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="status-card">
+                        <div class="status-label">전체</div>
+                        <div class="status-number">{{ total_count }}명</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="status-card">
+                        <div class="status-label">지원중</div>
+                        <div class="status-number">{{ status_counts.get('지원완료', 0) }}명</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="status-card">
+                        <div class="status-label">합격 처리</div>
+                        <div class="status-number">{{ status_counts.get('합격', 0) }}명</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="status-card">
+                        <div class="status-label">고민중</div>
+                        <div class="status-number">{{ status_counts.get('고민중', 0) }}명</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="status-card">
+                        <div class="status-label">HRD 최종 등록</div>
+                        <div class="status-number">{{ status_counts.get('HRD 최종 등록', 0) }}명</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="status-card">
+                        <div class="status-label">수강 취소</div>
+                        <div class="status-number">{{ status_counts.get('수강 취소', 0) }}명</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="status-section">
+            <h5 class="section-title">진행 상태</h5>
+            <div class="status-chart">
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 파일 업로드 및 필터 섹션 -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="action-bar">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex gap-2 align-items-center">
+                    <select class="form-select" id="bootcamp_filter" style="width: 200px;">
+                        <option value="">프론트엔드</option>
+                        {% for bootcamp in bootcamps %}
+                        <option value="{{ bootcamp.id }}">{{ bootcamp.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="status-pills">
+                        <button class="btn btn-pill active" data-status="all">전체 {{ total_count }}</button>
+                        <button class="btn btn-pill" data-status="지원중">지원중 {{ status_counts.get('지원완료', 0) }}</button>
+                        <button class="btn btn-pill" data-status="합격">합격 처리 {{ status_counts.get('합격', 0) }}</button>
+                        <button class="btn btn-pill" data-status="고민중">고민중 {{ status_counts.get('고민중', 0) }}</button>
+                        <button class="btn btn-pill" data-status="HRD">HRD 최종 등록 {{ status_counts.get('HRD 최종 등록', 0) }}</button>
+                        <button class="btn btn-pill" data-status="취소">수강 취소 {{ status_counts.get('수강 취소', 0) }}</button>
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <div class="search-box">
+                        <input type="text" class="form-control" placeholder="이름 또는 전화번호 검색...">
+                        <i class="bx bx-search"></i>
+                    </div>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                        <i class="bx bx-upload"></i> 지원 데이터 업로드
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 지원자 목록 테이블 -->
+<div class="table-responsive">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>이름</th>
+                <th>성별</th>
+                <th>나이</th>
+                <th>연락처</th>
+                <th>이메일</th>
+                <th>상태</th>
+                <th>마지막 연락일</th>
+                <th>메모</th>
+                <th>관리</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for student in students %}
+            <tr>
+                <td>{{ student.name }}</td>
+                <td>{{ student.gender }}</td>
+                <td>{{ student.age }}세</td>
+                <td>
+                    {% if student.phone %}
+                    <a href="tel:{{ student.phone }}" class="phone-link">{{ student.phone }}</a>
+                    {% endif %}
+                </td>
+                <td>{{ student.email }}</td>
+                <td>
+                    <select class="form-select form-select-sm status-select" data-student-id="{{ student.id }}">
+                        <option value="지원완료" {% if student.status == '지원완료' %}selected{% endif %}>지원완료</option>
+                        <option value="합격" {% if student.status == '합격' %}selected{% endif %}>합격</option>
+                        <option value="고민중" {% if student.status == '고민중' %}selected{% endif %}>고민중</option>
+                        <option value="HRD 최종 등록" {% if student.status == 'HRD 최종 등록' %}selected{% endif %}>HRD 최종 등록</option>
+                        <option value="수강 취소" {% if student.status == '수강 취소' %}selected{% endif %}>수강 취소</option>
+                    </select>
+                </td>
+                <td>{{ student.last_contact_date.strftime('%Y-%m-%d') if student.last_contact_date else '' }}</td>
+                <td>
+                    <input type="text" class="form-control form-control-sm memo-input" 
+                           value="{{ student.notes or '' }}" 
+                           placeholder="메모 추가..."
+                           data-student-id="{{ student.id }}">
+                </td>
+                <td>
+                    <button class="btn btn-sm btn-outline-danger delete-btn" data-student-id="{{ student.id }}">
+                        <i class="bx bx-trash"></i>
+                    </button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- 파일 업로드 모달 -->
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">지원 데이터 업로드</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form action="{{ url_for('upload_file') }}" method="post" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="file" class="form-label">CSV 파일 선택</label>
+                        <input type="file" class="form-control" id="file" name="file" accept=".csv" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="bootcamp_id" class="form-label">부트캠프 선택</label>
+                        <select class="form-select" id="bootcamp_id" name="bootcamp_id" required>
+                            {% for bootcamp in bootcamps %}
+                            <option value="{{ bootcamp.id }}">{{ bootcamp.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="batch_number" class="form-label">기수</label>
+                        <input type="number" class="form-control" id="batch_number" name="batch_number" value="1" min="1" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">업로드</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 상태 차트 초기화
+    const ctx = document.getElementById('statusChart').getContext('2d');
+    const statusData = {
+        labels: ['지원중', '합격', '고민중', 'HRD 최종 등록', '수강 취소'],
+        datasets: [{
+            data: [
+                {{ status_counts.get('지원완료', 0) }},
+                {{ status_counts.get('합격', 0) }},
+                {{ status_counts.get('고민중', 0) }},
+                {{ status_counts.get('HRD 최종 등록', 0) }},
+                {{ status_counts.get('수강 취소', 0) }}
+            ],
+            backgroundColor: ['#8B5CF6', '#10B981', '#F59E0B', '#3B82F6', '#EF4444']
+        }]
+    };
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: statusData,
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // 상태 변경 이벤트 처리
+    document.querySelectorAll('.status-select').forEach(select => {
+        select.addEventListener('change', function() {
+            const studentId = this.dataset.studentId;
+            const newStatus = this.value;
+            fetch(`/update_status/${studentId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status: newStatus })
+            }).then(response => {
+                if (response.ok) {
+                    location.reload();
+                }
+            });
+        });
+    });
+
+    // 메모 입력 이벤트 처리
+    document.querySelectorAll('.memo-input').forEach(input => {
+        let timeout;
+        input.addEventListener('input', function() {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+                const studentId = this.dataset.studentId;
+                const memo = this.value;
+                fetch(`/update_memo/${studentId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ memo: memo })
+                });
+            }, 500);
+        });
+    });
+
+    // 삭제 버튼 이벤트 처리
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            if (confirm('정말 삭제하시겠습니까?')) {
+                const studentId = this.dataset.studentId;
+                fetch(`/delete_student/${studentId}`, {
+                    method: 'DELETE'
+                }).then(response => {
+                    if (response.ok) {
+                        location.reload();
+                    }
+                });
+            }
+        });
+    });
+});
+</script>
+{% endblock %} 
