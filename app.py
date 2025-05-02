@@ -680,12 +680,15 @@ def update_bootcamp_student(bootcamp_id, student_id):
     return jsonify(student.to_dict())
 
 if __name__ == '__main__':
-    with app.app_context():
-        # 데이터베이스 테이블 생성
-        db.create_all()
-        # 부트캠프 데이터 초기화
-        init_bootcamps()
+    try:
+        with app.app_context():
+            # 데이터베이스 테이블 생성
+            db.create_all()
+            # 부트캠프 데이터 초기화
+            init_bootcamps()
 
-    # 서버 시작 (환경 변수에서 포트 가져오기)
-    port = int(os.environ.get('PORT', 10000))
-    app.run(host='0.0.0.0', debug=False, port=port)
+        # 서버 시작
+        port = int(os.environ.get('PORT', 10000))
+        app.run(host='0.0.0.0', port=port, debug=False)
+    except Exception as e:
+        print(f"서버 시작 중 오류 발생: {e}")
