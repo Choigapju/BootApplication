@@ -240,19 +240,19 @@ def detect_bootcamp_from_filename(filename):
     """파일명에서 부트캠프와 기수 정보 추출"""
     print(f"\n=== 파일명 분석 시작: {filename} ===")
     
-    # 부트캠프 코드와 실제 ID 매핑
+    # 고정된 부트캠프 코드 매핑
     bootcamp_code_mapping = {
-        'ugm': 'game',     # 유니티 게임
+        'ugm': 'game',      # 유니티 게임
         'growth': 'growth', # 그로스
         'frontend': 'frontend',   # 프론트엔드
         'backend': 'backend',    # 백엔드
-        'ios': 'ios',      # iOS
-        'aos': 'android',  # 안드로이드
-        'data': 'data',    # 데이터
-        'design': 'uxui',    # UX/UI
-        'aiw': 'ai-service', # AI 웹 서비스
+        'ios': 'ios',       # iOS
+        'aos': 'android',   # 안드로이드
+        'data': 'data',     # 데이터
+        'design': 'uxui',   # UX/UI (디자인)
+        'aiw': 'ai-service',# AI 웹 서비스
         'cloud': 'cloud',   # 클라우드
-        'ai': 'ai',        # AI
+        'ai': 'ai',         # AI
     }
     
     filename_lower = filename.lower()
@@ -261,32 +261,37 @@ def detect_bootcamp_from_filename(filename):
     
     print(f"분석할 파일명: {filename_lower}")
     
-    # kdt- 접두사가 있는 경우 처리
-    if 'kdt-' in filename_lower:
-        # 파일명을 '-'와 '_'로 분리
-        parts = filename_lower.split('_')[0].split('-')
-        if len(parts) >= 3:  # kdt-ugm-5th 형식 처리
-            bootcamp_code = parts[1]  # ugm
-            batch_info = parts[2]     # 5th
-            
-            print(f"추출된 코드: bootcamp={bootcamp_code}, batch={batch_info}")
-            
-            # 부트캠프 코드 매핑
-            if bootcamp_code in bootcamp_code_mapping:
-                detected_bootcamp = bootcamp_code_mapping[bootcamp_code]
-                print(f"매핑된 부트캠프 ID: {detected_bootcamp}")
-            
-            # 기수 정보 추출 (숫자만 추출)
-            try:
-                # 숫자만 추출 ('5th' -> '5')
-                batch_number = int(''.join(filter(str.isdigit, batch_info)))
-                print(f"추출된 기수: {batch_number}")
-            except ValueError:
-                print("기수 추출 실패")
-                batch_number = 1
-    
-    print(f"=== 파일명 분석 완료: 부트캠프={detected_bootcamp}, 기수={batch_number} ===\n")
-    return detected_bootcamp, batch_number
+    try:
+        # kdt- 접두사가 있는 경우 처리
+        if 'kdt-' in filename_lower:
+            # 파일명을 '-'와 '_'로 분리
+            parts = filename_lower.split('_')[0].split('-')
+            if len(parts) >= 3:  # kdt-frontend-14th 형식 처리
+                bootcamp_code = parts[1]  # frontend
+                batch_info = parts[2]     # 14th
+                
+                print(f"추출된 코드: bootcamp={bootcamp_code}, batch={batch_info}")
+                
+                # 부트캠프 코드 매핑
+                if bootcamp_code in bootcamp_code_mapping:
+                    detected_bootcamp = bootcamp_code_mapping[bootcamp_code]
+                    print(f"매핑된 부트캠프 ID: {detected_bootcamp}")
+                else:
+                    print(f"매핑되지 않은 부트캠프 코드: {bootcamp_code}")
+                
+                # 기수 정보 추출 (숫자만 추출)
+                try:
+                    batch_number = int(''.join(filter(str.isdigit, batch_info)))
+                    print(f"추출된 기수: {batch_number}")
+                except ValueError:
+                    print("기수 추출 실패")
+                    batch_number = 1
+        
+        print(f"=== 파일명 분석 완료: 부트캠프={detected_bootcamp}, 기수={batch_number} ===\n")
+        return detected_bootcamp, batch_number
+    except Exception as e:
+        print(f"파일명 분석 중 오류 발생: {e}")
+        return None, None
 
 def parse_csv(file_path, bootcamp_id=None, batch_number=None):
     """CSV 파일 파싱"""
@@ -296,56 +301,57 @@ def parse_csv(file_path, bootcamp_id=None, batch_number=None):
         df = pd.read_csv(file_path, header=None, skiprows=1)
         
         for _, row in df.iterrows():
-            if len(row) < 8:
-                continue
-            
-            name = row.iloc[7] if len(row) > 7 and pd.notna(row.iloc[7]) else None
-            phone = row.iloc[8] if len(row) > 8 and pd.notna(row.iloc[8]) else None
-            
-            if not name or not phone:
-                continue
+            try:
+                if len(row) < 8:
+                    continue
                 
-            email = row.iloc[9] if len(row) > 9 and pd.notna(row.iloc[9]) else ''
-            birthdate = row.iloc[10] if len(row) > 10 and pd.notna(row.iloc[10]) else None
-            gender_data = row.iloc[11] if len(row) > 11 and pd.notna(row.iloc[11]) else None
-            
-            formatted_phone = format_phone(phone)
-            age = get_age(birthdate)
-            gender = determine_gender(name, gender_data)
-            
-            # 기존 학생 확인
-            existing_student = Student.query.filter_by(phone=formatted_phone).first()
-            
-            if existing_student:
-                print(f"기존 학생 업데이트: {name}, bootcamp={bootcamp_id}, batch={batch_number}")
-                existing_student.name = name
-                existing_student.gender = gender
-                existing_student.age = age
-                existing_student.email = email if email else ''
+                name = row.iloc[7] if len(row) > 7 and pd.notna(row.iloc[7]) else None
+                phone = row.iloc[8] if len(row) > 8 and pd.notna(row.iloc[8]) else None
                 
-                if bootcamp_id:
+                if not name or not phone:
+                    continue
+                    
+                email = row.iloc[9] if len(row) > 9 and pd.notna(row.iloc[9]) else ''
+                birthdate = row.iloc[10] if len(row) > 10 and pd.notna(row.iloc[10]) else None
+                gender_data = row.iloc[11] if len(row) > 11 and pd.notna(row.iloc[11]) else None
+                
+                formatted_phone = format_phone(phone)
+                age = get_age(birthdate)
+                gender = determine_gender(name, gender_data)
+                
+                # 기존 학생 확인
+                existing_student = Student.query.filter_by(phone=formatted_phone).first()
+                
+                if existing_student:
+                    print(f"기존 학생 업데이트: {name}, bootcamp={bootcamp_id}, batch={batch_number}")
+                    existing_student.name = name
+                    existing_student.gender = gender
+                    existing_student.age = age
+                    existing_student.email = email if email else ''
                     existing_student.bootcamp_id = bootcamp_id
-                if batch_number is not None:
                     existing_student.batch_number = batch_number
+                    
+                    db.session.add(existing_student)
+                    results.append(existing_student.to_dict())
+                else:
+                    print(f"새 학생 추가: {name}, bootcamp={bootcamp_id}, batch={batch_number}")
+                    student = Student(
+                        name=name,
+                        gender=gender,
+                        age=age,
+                        phone=formatted_phone,
+                        email=email if email else '',
+                        bootcamp_id=bootcamp_id,
+                        batch_number=batch_number,
+                        status="applying",
+                        last_contact_date=datetime.datetime.now().date()
+                    )
+                    db.session.add(student)
+                    results.append(student.to_dict())
                 
-                db.session.add(existing_student)
-                results.append(existing_student.to_dict())
-            else:
-                print(f"새 학생 추가: {name}, bootcamp={bootcamp_id}, batch={batch_number}")
-                student = Student(
-                    name=name,
-                    gender=gender,
-                    age=age,
-                    phone=formatted_phone,
-                    email=email if email else '',
-                    bootcamp_id=bootcamp_id,
-                    batch_number=batch_number,
-                    status="applying",
-                    last_contact_date=datetime.datetime.now().date()
-                )
-                db.session.add(student)
-                db.session.flush()
-                results.append(student.to_dict())
+            except Exception as row_error:
+                print(f"행 처리 중 오류 발생: {row_error}")
+                continue
         
         db.session.commit()
         print(f"CSV 파싱 완료: {len(results)}개 데이터 처리됨")
@@ -354,11 +360,11 @@ def parse_csv(file_path, bootcamp_id=None, batch_number=None):
         db.session.rollback()
         print(f"CSV 파싱 오류: {e}")
         raise
-        
-    try:
-        os.remove(file_path)
-    except:
-        pass
+    finally:
+        try:
+            os.remove(file_path)
+        except:
+            pass
         
     return results
 
