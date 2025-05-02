@@ -68,15 +68,18 @@ class Student(db.Model):
     name = db.Column(db.String(100), nullable=False)
     gender = db.Column(db.String(10))
     age = db.Column(db.Integer)
-    phone = db.Column(db.String(20), unique=True, nullable=False)
+    phone = db.Column(db.String(20), nullable=False)  # unique 제거 (여러 부트캠프 지원 가능)
     email = db.Column(db.String(100))
-    bootcamp_id = db.Column(db.String(50))
-    batch_number = db.Column(db.Integer)
+    bootcamp_id = db.Column(db.String(50), db.ForeignKey('bootcamps.id'), nullable=False)  # 외래 키 설정
     status = db.Column(db.String(20), default='applying')
     considering_reason = db.Column(db.String(50))
     last_contact_date = db.Column(db.Date, default=datetime.datetime.now().date())
     notes = db.Column(db.Text)
     updated_at = db.Column(db.DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
+    batch_number = db.Column(db.Integer)
+    
+    # 관계 설정
+    bootcamp = db.relationship('Bootcamp', backref=db.backref('students', lazy=True))
     
     def to_dict(self):
         return {
@@ -101,11 +104,17 @@ class Bootcamp(db.Model):
     
     id = db.Column(db.String(50), primary_key=True)
     name = db.Column(db.String(100), nullable=False)
+    batch_number = db.Column(db.Integer, default=1)
+    recruitment_start_date = db.Column(db.Date, default=datetime.datetime.now().date())
+    recruitment_end_date = db.Column(db.Date)
     
     def to_dict(self):
         return {
             'id': self.id,
-            'name': self.name
+            'name': self.name,
+            'batchNumber': self.batch_number,
+            'recruitmentStartDate': self.recruitment_start_date.strftime('%Y-%m-%d') if self.recruitment_start_date else None,
+            'recruitmentEndDate': self.recruitment_end_date.strftime('%Y-%m-%d') if self.recruitment_end_date else None
         }
 
 def allowed_file(filename):
@@ -301,6 +310,11 @@ def parse_csv(file_path, bootcamp_id=None, batch_number=None):
         if not bootcamp_id:
             raise ValueError("부트캠프 ID가 필요합니다.")
             
+        # 부트캠프 존재 여부 확인
+        bootcamp = Bootcamp.query.get(bootcamp_id)
+        if not bootcamp:
+            raise ValueError(f"존재하지 않는 부트캠프입니다: {bootcamp_id}")
+            
         df = pd.read_csv(file_path, header=None, skiprows=1)
         
         for _, row in df.iterrows():
@@ -322,50 +336,20 @@ def parse_csv(file_path, bootcamp_id=None, batch_number=None):
                 age = get_age(birthdate)
                 gender = determine_gender(name, gender_data)
                 
-                # 기존 학생 확인
-                existing_student = Student.query.filter_by(phone=formatted_phone).first()
-                
-                if existing_student:
-                    print(f"기존 학생 업데이트: {name}, bootcamp={bootcamp_id}, batch={batch_number}")
-                    # 기존 학생의 부트캠프 ID가 다른 경우, 새로운 레코드 생성
-                    if existing_student.bootcamp_id != bootcamp_id:
-                        new_student = Student(
-                            name=name,
-                            gender=gender,
-                            age=age,
-                            phone=formatted_phone,
-                            email=email if email else '',
-                            bootcamp_id=bootcamp_id,
-                            batch_number=batch_number,
-                            status="applying",
-                            last_contact_date=datetime.datetime.now().date()
-                        )
-                        db.session.add(new_student)
-                        results.append(new_student.to_dict())
-                    else:
-                        # 같은 부트캠프인 경우 업데이트
-                        existing_student.name = name
-                        existing_student.gender = gender
-                        existing_student.age = age
-                        existing_student.email = email if email else ''
-                        existing_student.batch_number = batch_number
-                        db.session.add(existing_student)
-                        results.append(existing_student.to_dict())
-                else:
-                    print(f"새 학생 추가: {name}, bootcamp={bootcamp_id}, batch={batch_number}")
-                    student = Student(
-                        name=name,
-                        gender=gender,
-                        age=age,
-                        phone=formatted_phone,
-                        email=email if email else '',
-                        bootcamp_id=bootcamp_id,
-                        batch_number=batch_number,
-                        status="applying",
-                        last_contact_date=datetime.datetime.now().date()
-                    )
-                    db.session.add(student)
-                    results.append(student.to_dict())
+                # 새로운 지원 데이터 생성
+                student = Student(
+                    name=name,
+                    gender=gender,
+                    age=age,
+                    phone=formatted_phone,
+                    email=email if email else '',
+                    bootcamp_id=bootcamp_id,
+                    batch_number=batch_number,
+                    status="applying",
+                    last_contact_date=datetime.datetime.now().date()
+                )
+                db.session.add(student)
+                results.append(student.to_dict())
                 
             except Exception as row_error:
                 print(f"행 처리 중 오류 발생: {row_error}")
@@ -635,10 +619,9 @@ def update_bootcamp_student(bootcamp_id, student_id):
 if __name__ == '__main__':
     try:
         with app.app_context():
-            # 데이터베이스 테이블 생성
-            db.create_all()
-            # 부트캠프 데이터 초기화
-            init_bootcamps()
+            db.drop_all()  # 기존 테이블 삭제
+            db.create_all()  # 새로운 스키마로 테이블 생성
+            init_bootcamps()  # 부트캠프 초기 데이터 생성
 
         # 서버 시작
         port = int(os.environ.get('PORT', 10000))
