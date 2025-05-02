@@ -236,10 +236,63 @@ def init_bootcamps():
     
     return [bootcamp.to_dict() for bootcamp in Bootcamp.query.all()]
 
+def detect_bootcamp_from_filename(filename):
+    """파일명에서 부트캠프와 기수 정보 추출"""
+    print(f"\n=== 파일명 분석 시작: {filename} ===")
+    
+    # 부트캠프 코드와 실제 ID 매핑
+    bootcamp_code_mapping = {
+        'ugm': 'game',     # 유니티 게임
+        'growth': 'growth', # 그로스
+        'frontend': 'frontend',   # 프론트엔드
+        'backend': 'backend',    # 백엔드
+        'ios': 'ios',      # iOS
+        'aos': 'android',  # 안드로이드
+        'data': 'data',    # 데이터
+        'design': 'uxui',    # UX/UI
+        'aiw': 'ai-service', # AI 웹 서비스
+        'cloud': 'cloud',   # 클라우드
+        'ai': 'ai',        # AI
+    }
+    
+    filename_lower = filename.lower()
+    detected_bootcamp = None
+    batch_number = None
+    
+    print(f"분석할 파일명: {filename_lower}")
+    
+    # kdt- 접두사가 있는 경우 처리
+    if 'kdt-' in filename_lower:
+        # 파일명을 '-'와 '_'로 분리
+        parts = filename_lower.split('_')[0].split('-')
+        if len(parts) >= 3:  # kdt-ugm-5th 형식 처리
+            bootcamp_code = parts[1]  # ugm
+            batch_info = parts[2]     # 5th
+            
+            print(f"추출된 코드: bootcamp={bootcamp_code}, batch={batch_info}")
+            
+            # 부트캠프 코드 매핑
+            if bootcamp_code in bootcamp_code_mapping:
+                detected_bootcamp = bootcamp_code_mapping[bootcamp_code]
+                print(f"매핑된 부트캠프 ID: {detected_bootcamp}")
+            
+            # 기수 정보 추출 (숫자만 추출)
+            try:
+                # 숫자만 추출 ('5th' -> '5')
+                batch_number = int(''.join(filter(str.isdigit, batch_info)))
+                print(f"추출된 기수: {batch_number}")
+            except ValueError:
+                print("기수 추출 실패")
+                batch_number = 1
+    
+    print(f"=== 파일명 분석 완료: 부트캠프={detected_bootcamp}, 기수={batch_number} ===\n")
+    return detected_bootcamp, batch_number
+
 def parse_csv(file_path, bootcamp_id=None, batch_number=None):
     """CSV 파일 파싱"""
     results = []
     try:
+        print(f"CSV 파싱 시작: bootcamp_id={bootcamp_id}, batch_number={batch_number}")
         df = pd.read_csv(file_path, header=None, skiprows=1)
         
         for _, row in df.iterrows():
@@ -260,9 +313,11 @@ def parse_csv(file_path, bootcamp_id=None, batch_number=None):
             age = get_age(birthdate)
             gender = determine_gender(name, gender_data)
             
+            # 기존 학생 확인
             existing_student = Student.query.filter_by(phone=formatted_phone).first()
             
             if existing_student:
+                print(f"기존 학생 업데이트: {name}, bootcamp={bootcamp_id}, batch={batch_number}")
                 existing_student.name = name
                 existing_student.gender = gender
                 existing_student.age = age
@@ -276,6 +331,7 @@ def parse_csv(file_path, bootcamp_id=None, batch_number=None):
                 db.session.add(existing_student)
                 results.append(existing_student.to_dict())
             else:
+                print(f"새 학생 추가: {name}, bootcamp={bootcamp_id}, batch={batch_number}")
                 student = Student(
                     name=name,
                     gender=gender,
@@ -292,10 +348,12 @@ def parse_csv(file_path, bootcamp_id=None, batch_number=None):
                 results.append(student.to_dict())
         
         db.session.commit()
+        print(f"CSV 파싱 완료: {len(results)}개 데이터 처리됨")
             
     except Exception as e:
         db.session.rollback()
         print(f"CSV 파싱 오류: {e}")
+        raise
         
     try:
         os.remove(file_path)
@@ -395,62 +453,6 @@ def parse_excel(file_path, bootcamp_id=None, batch_number=None):
         
     return results
 
-# 파일명에서 부트캠프와 기수 정보를 추출하는 함수 수정
-def detect_bootcamp_from_filename(filename):
-    """파일명에서 부트캠프와 기수 정보 추출"""
-    print(f"\n=== 파일명 분석 시작: {filename} ===")
-    
-    bootcamp_patterns = {
-        'frontend': ['프론트엔드', 'frontend', 'front'],
-        'backend': ['백엔드', 'backend', 'back'],
-        'ios': ['ios', '아이오에스'],
-        'android': ['android', '안드로이드'],
-        'data': ['data', '데이터'],
-        'uxui': ['uxui', 'ux/ui', '유엑스'],
-        'startup': ['startup', '스타트업'],
-        'shortterm': ['shortterm', '단기'],
-        'ai-service': ['ai-service', 'ai서비스'],
-        'game': ['game', '게임', '유니티'],
-        'cloud': ['cloud', '클라우드'],
-        'ai': ['ai', '에이아이'],
-        'blockchain': ['blockchain', '블록체인'],
-        'growth': ['growth', '그로스']
-    }
-    
-    filename_lower = filename.lower()
-    detected_bootcamp = None
-    batch_number = None
-    
-    # kdt- 접두사가 있는 경우 처리
-    if 'kdt-' in filename_lower:
-        parts = filename_lower.split('_')[0].split('-')
-        if len(parts) >= 3:  # kdt-growth-2nd 형식 처리
-            bootcamp_name = parts[1]  # growth
-            batch_info = parts[2]  # 2nd
-            print(f"KDT 형식에서 추출된 정보: 부트캠프={bootcamp_name}, 기수={batch_info}")
-            
-            # 부트캠프 매칭
-            for bootcamp_id, patterns in bootcamp_patterns.items():
-                if any(pattern in bootcamp_name for pattern in patterns):
-                    detected_bootcamp = bootcamp_id
-                    print(f"매칭된 부트캠프 ID: {detected_bootcamp}")
-                    break
-            
-            # 기수 정보 추출
-            if 'st' in batch_info or 'nd' in batch_info or 'rd' in batch_info or 'th' in batch_info:
-                try:
-                    batch_number = int(''.join(filter(str.isdigit, batch_info)))
-                    print(f"추출된 기수: {batch_number}")
-                except ValueError:
-                    print("기수 추출 실패")
-                    batch_number = 1
-            elif batch_info.isdigit():
-                batch_number = int(batch_info)
-                print(f"추출된 기수: {batch_number}")
-    
-    print(f"=== 파일명 분석 완료: 부트캠프={detected_bootcamp}, 기수={batch_number} ===\n")
-    return detected_bootcamp, batch_number
-
 # 라우트 정의
 @app.route('/')
 def index():
@@ -473,25 +475,33 @@ def upload_file():
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
         
-        # 파일명에서 부트캠프와 기수 정보 추출
-        bootcamp_id, batch_number = detect_bootcamp_from_filename(filename)
-        print(f"파일 '{filename}'에서 감지된 정보: 부트캠프={bootcamp_id}, 기수={batch_number}")
-        
-        file_ext = os.path.splitext(filename)[1].lower()
-        
-        if file_ext == '.csv':
-            parsed_data = parse_csv(file_path, bootcamp_id, batch_number)
-        elif file_ext in ['.xlsx', '.xls']:
-            parsed_data = parse_excel(file_path, bootcamp_id, batch_number)
-        else:
-            return jsonify({"error": "지원되지 않는 파일 형식입니다."}), 400
+        try:
+            # 파일명에서 부트캠프와 기수 정보 추출
+            bootcamp_id, batch_number = detect_bootcamp_from_filename(filename)
+            print(f"파일 '{filename}'에서 감지된 정보: 부트캠프={bootcamp_id}, 기수={batch_number}")
             
-        return jsonify({
-            "success": True, 
-            "count": len(parsed_data), 
-            "bootcamp": bootcamp_id,
-            "batchNumber": batch_number
-        })
+            if not bootcamp_id:
+                return jsonify({"error": "부트캠프 정보를 파일명에서 추출할 수 없습니다."}), 400
+            
+            file_ext = os.path.splitext(filename)[1].lower()
+            
+            if file_ext == '.csv':
+                parsed_data = parse_csv(file_path, bootcamp_id, batch_number)
+            elif file_ext in ['.xlsx', '.xls']:
+                parsed_data = parse_excel(file_path, bootcamp_id, batch_number)
+            else:
+                return jsonify({"error": "지원되지 않는 파일 형식입니다."}), 400
+                
+            return jsonify({
+                "success": True, 
+                "count": len(parsed_data), 
+                "bootcamp": bootcamp_id,
+                "batchNumber": batch_number
+            })
+            
+        except Exception as e:
+            print(f"파일 처리 중 오류 발생: {e}")
+            return jsonify({"error": str(e)}), 500
     
     return jsonify({"error": "지원되지 않는 파일 형식입니다."}), 400
 
