@@ -400,6 +400,49 @@ def parse_excel(file_path, bootcamp_id=None):
         
     return results
 
+# 파일명에서 부트캠프 정보 추출하는 함수 추가
+def detect_bootcamp_from_filename(filename):
+    """파일명에서 부트캠프 정보 추출"""
+    print(f"\n=== 파일명 분석 시작: {filename} ===")
+    
+    # 파일명에서 부트캠프 정보 추출
+    bootcamp_patterns = {
+        'frontend': ['프론트엔드', 'frontend', 'front'],
+        'backend': ['백엔드', 'backend', 'back'],
+        'ios': ['ios', '아이오에스'],
+        'android': ['android', '안드로이드'],
+        'data': ['data', '데이터'],
+        'uxui': ['uxui', 'ux/ui', '유엑스'],
+        'startup': ['startup', '스타트업'],
+        'shortterm': ['shortterm', '단기'],
+        'ai-service': ['ai-service', 'ai서비스'],
+        'game': ['game', '게임'],
+        'cloud': ['cloud', '클라우드'],
+        'ai': ['ai', '에이아이'],
+        'blockchain': ['blockchain', '블록체인'],
+        'growth': ['growth', '그로스']
+    }
+    
+    filename_lower = filename.lower()
+    detected_bootcamp = None
+    
+    # kdt- 접두사가 있는 경우 처리
+    if 'kdt-' in filename_lower:
+        parts = filename_lower.split('_')[0].split('-')
+        if len(parts) >= 2:
+            bootcamp_name = parts[1]  # kdt-growth-2nd에서 growth 추출
+            print(f"KDT 형식에서 추출된 부트캠프명: {bootcamp_name}")
+            
+            # 부트캠프 매칭
+            for bootcamp_id, patterns in bootcamp_patterns.items():
+                if any(pattern in bootcamp_name for pattern in patterns):
+                    detected_bootcamp = bootcamp_id
+                    print(f"매칭된 부트캠프 ID: {detected_bootcamp}")
+                    break
+    
+    print(f"=== 파일명 분석 완료: {detected_bootcamp} ===\n")
+    return detected_bootcamp
+
 # 라우트 정의
 @app.route('/')
 def index():
@@ -422,16 +465,20 @@ def upload_file():
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
         
+        # 파일명에서 부트캠프 정보 추출
+        bootcamp_id = detect_bootcamp_from_filename(filename)
+        print(f"파일 '{filename}'에서 감지된 부트캠프: {bootcamp_id}")
+        
         file_ext = os.path.splitext(filename)[1].lower()
         
         if file_ext == '.csv':
-            parsed_data = parse_csv(file_path)
+            parsed_data = parse_csv(file_path, bootcamp_id)
         elif file_ext in ['.xlsx', '.xls']:
-            parsed_data = parse_excel(file_path)
+            parsed_data = parse_excel(file_path, bootcamp_id)
         else:
             return jsonify({"error": "지원되지 않는 파일 형식입니다."}), 400
             
-        return jsonify({"success": True, "count": len(parsed_data)})
+        return jsonify({"success": True, "count": len(parsed_data), "bootcamp": bootcamp_id})
     
     return jsonify({"error": "지원되지 않는 파일 형식입니다."}), 400
 
@@ -501,9 +548,6 @@ def get_bootcamp_students(bootcamp_id):
 @app.route('/api/bootcamps/<string:bootcamp_id>/upload', methods=['POST'])
 def upload_bootcamp_file(bootcamp_id):
     """부트캠프별 학생 데이터 업로드 처리"""
-    # 부트캠프 존재 여부 확인
-    bootcamp = db.session.query(Bootcamp).filter_by(id=bootcamp_id).first_or_404()
-    
     if 'file' not in request.files:
         return jsonify({"error": "파일이 업로드되지 않았습니다."}), 400
         
@@ -517,16 +561,23 @@ def upload_bootcamp_file(bootcamp_id):
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
         
+        # 파일명에서 부트캠프 정보 추출
+        detected_bootcamp = detect_bootcamp_from_filename(filename)
+        
+        # 감지된 부트캠프가 있으면 해당 부트캠프로 저장, 없으면 URL의 부트캠프 ID 사용
+        actual_bootcamp_id = detected_bootcamp if detected_bootcamp else bootcamp_id
+        print(f"실제 저장될 부트캠프: {actual_bootcamp_id}")
+        
         file_ext = os.path.splitext(filename)[1].lower()
         
         if file_ext == '.csv':
-            parsed_data = parse_csv(file_path, bootcamp_id)
+            parsed_data = parse_csv(file_path, actual_bootcamp_id)
         elif file_ext in ['.xlsx', '.xls']:
-            parsed_data = parse_excel(file_path, bootcamp_id)
+            parsed_data = parse_excel(file_path, actual_bootcamp_id)
         else:
             return jsonify({"error": "지원되지 않는 파일 형식입니다."}), 400
             
-        return jsonify({"success": True, "count": len(parsed_data)})
+        return jsonify({"success": True, "count": len(parsed_data), "bootcamp": actual_bootcamp_id})
     
     return jsonify({"error": "지원되지 않는 파일 형식입니다."}), 400
 
