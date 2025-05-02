@@ -327,16 +327,30 @@ def parse_csv(file_path, bootcamp_id=None, batch_number=None):
                 
                 if existing_student:
                     print(f"기존 학생 업데이트: {name}, bootcamp={bootcamp_id}, batch={batch_number}")
-                    existing_student.name = name
-                    existing_student.gender = gender
-                    existing_student.age = age
-                    existing_student.email = email if email else ''
-                    # 무조건 새로운 bootcamp_id로 업데이트
-                    existing_student.bootcamp_id = bootcamp_id
-                    existing_student.batch_number = batch_number
-                    
-                    db.session.add(existing_student)
-                    results.append(existing_student.to_dict())
+                    # 기존 학생의 부트캠프 ID가 다른 경우, 새로운 레코드 생성
+                    if existing_student.bootcamp_id != bootcamp_id:
+                        new_student = Student(
+                            name=name,
+                            gender=gender,
+                            age=age,
+                            phone=formatted_phone,
+                            email=email if email else '',
+                            bootcamp_id=bootcamp_id,
+                            batch_number=batch_number,
+                            status="applying",
+                            last_contact_date=datetime.datetime.now().date()
+                        )
+                        db.session.add(new_student)
+                        results.append(new_student.to_dict())
+                    else:
+                        # 같은 부트캠프인 경우 업데이트
+                        existing_student.name = name
+                        existing_student.gender = gender
+                        existing_student.age = age
+                        existing_student.email = email if email else ''
+                        existing_student.batch_number = batch_number
+                        db.session.add(existing_student)
+                        results.append(existing_student.to_dict())
                 else:
                     print(f"새 학생 추가: {name}, bootcamp={bootcamp_id}, batch={batch_number}")
                     student = Student(
@@ -345,7 +359,7 @@ def parse_csv(file_path, bootcamp_id=None, batch_number=None):
                         age=age,
                         phone=formatted_phone,
                         email=email if email else '',
-                        bootcamp_id=bootcamp_id,  # 반드시 bootcamp_id 설정
+                        bootcamp_id=bootcamp_id,
                         batch_number=batch_number,
                         status="applying",
                         last_contact_date=datetime.datetime.now().date()
@@ -484,16 +498,12 @@ def get_bootcamp_students(bootcamp_id):
     try:
         print(f"\n=== 학생 데이터 조회 시작: bootcamp_id={bootcamp_id} ===")
         
-        # 'all'인 경우 bootcamp_id가 있는 학생 데이터만 반환
         if bootcamp_id == 'all':
+            # 부트캠프 ID가 있는 학생만 조회
             students = Student.query.filter(Student.bootcamp_id.isnot(None)).all()
-            print(f"bootcamp_id가 있는 전체 학생 수: {len(students)}")
+            print(f"전체 학생 수: {len(students)}")
         else:
-            # 존재하는 부트캠프인지 확인
-            bootcamp = db.session.query(Bootcamp).filter_by(id=bootcamp_id).first_or_404()
-            print(f"부트캠프 확인: {bootcamp.name}")
-            
-            # 해당 부트캠프의 학생 데이터만 정확하게 조회
+            # 특정 부트캠프 학생만 조회
             students = Student.query.filter_by(bootcamp_id=bootcamp_id).all()
             print(f"부트캠프 {bootcamp_id}의 학생 수: {len(students)}")
         
