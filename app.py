@@ -248,7 +248,7 @@ def detect_bootcamp_from_filename(filename):
     """파일명에서 부트캠프와 기수 정보 추출"""
     print(f"\n=== 파일명 분석 시작: {filename} ===")
     
-    # 고정된 부트캠프 코드 매핑
+    # 부트캠프 코드 매핑 (정확한 매핑으로 수정)
     bootcamp_code_mapping = {
         'ugm': 'game',      # 유니티 게임
         'growth': 'growth', # 그로스
@@ -270,24 +270,23 @@ def detect_bootcamp_from_filename(filename):
     print(f"분석할 파일명: {filename_lower}")
     
     try:
-        # kdt- 접두사가 있는 경우 처리
         if 'kdt-' in filename_lower:
-            # 파일명을 '-'와 '_'로 분리
             parts = filename_lower.split('_')[0].split('-')
-            if len(parts) >= 3:  # kdt-frontend-14th 형식 처리
-                bootcamp_code = parts[1]  # frontend
-                batch_info = parts[2]     # 14th
+            if len(parts) >= 3:
+                bootcamp_code = parts[1]  # ugm, design 등
+                batch_info = parts[2]     # 5th 등
                 
                 print(f"추출된 코드: bootcamp={bootcamp_code}, batch={batch_info}")
                 
-                # 부트캠프 코드 매핑
+                # 부트캠프 코드 매핑 확인
                 if bootcamp_code in bootcamp_code_mapping:
                     detected_bootcamp = bootcamp_code_mapping[bootcamp_code]
                     print(f"매핑된 부트캠프 ID: {detected_bootcamp}")
                 else:
                     print(f"매핑되지 않은 부트캠프 코드: {bootcamp_code}")
+                    return None, None
                 
-                # 기수 정보 추출 (숫자만 추출)
+                # 기수 정보 추출
                 try:
                     batch_number = int(''.join(filter(str.isdigit, batch_info)))
                     print(f"추출된 기수: {batch_number}")
@@ -309,12 +308,12 @@ def parse_csv(file_path, bootcamp_id=None, batch_number=None):
         
         if not bootcamp_id:
             raise ValueError("부트캠프 ID가 필요합니다.")
-            
+        
         # 부트캠프 존재 여부 확인
         bootcamp = Bootcamp.query.get(bootcamp_id)
         if not bootcamp:
             raise ValueError(f"존재하지 않는 부트캠프입니다: {bootcamp_id}")
-            
+        
         df = pd.read_csv(file_path, header=None, skiprows=1)
         
         for _, row in df.iterrows():
@@ -327,7 +326,7 @@ def parse_csv(file_path, bootcamp_id=None, batch_number=None):
                 
                 if not name or not phone:
                     continue
-                    
+                
                 email = row.iloc[9] if len(row) > 9 and pd.notna(row.iloc[9]) else ''
                 birthdate = row.iloc[10] if len(row) > 10 and pd.notna(row.iloc[10]) else None
                 gender_data = row.iloc[11] if len(row) > 11 and pd.notna(row.iloc[11]) else None
@@ -343,11 +342,13 @@ def parse_csv(file_path, bootcamp_id=None, batch_number=None):
                     age=age,
                     phone=formatted_phone,
                     email=email if email else '',
-                    bootcamp_id=bootcamp_id,
+                    bootcamp_id=bootcamp_id,  # 파일명에서 추출한 bootcamp_id 사용
                     batch_number=batch_number,
                     status="applying",
                     last_contact_date=datetime.datetime.now().date()
                 )
+                
+                print(f"학생 데이터 생성: {name}, bootcamp={bootcamp_id}, batch={batch_number}")
                 db.session.add(student)
                 results.append(student.to_dict())
                 
@@ -357,7 +358,7 @@ def parse_csv(file_path, bootcamp_id=None, batch_number=None):
         
         db.session.commit()
         print(f"CSV 파싱 완료: {len(results)}개 데이터 처리됨")
-            
+        
     except Exception as e:
         db.session.rollback()
         print(f"CSV 파싱 오류: {e}")
@@ -381,15 +382,15 @@ def upload_file():
     """파일 업로드 API"""
     if 'file' not in request.files:
         return jsonify({"error": "파일이 업로드되지 않았습니다."}), 400
-        
+    
     file = request.files['file']
     
     if file.filename == '':
         return jsonify({"error": "선택된 파일이 없습니다."}), 400
-        
+    
     if not file.filename.endswith('.csv'):
         return jsonify({"error": "CSV 파일만 업로드 가능합니다."}), 400
-        
+    
     if file and allowed_file(file.filename):
         try:
             filename = secure_filename(file.filename)
@@ -416,12 +417,12 @@ def upload_file():
                 "bootcamp": bootcamp_id,
                 "batchNumber": batch_number
             })
-                
+            
         except Exception as e:
             print(f"파일 처리 중 오류 발생: {e}")
             return jsonify({"error": str(e)}), 500
     
-    return jsonify({"error": "CSV 파일만 지원됩니다."}), 400
+    return jsonify({"error": "지원되지 않는 파일 형식입니다."}), 400
 
 @app.route('/api/students', methods=['GET'])
 def get_students():
@@ -487,8 +488,10 @@ def get_bootcamp_students(bootcamp_id):
             students = Student.query.filter(Student.bootcamp_id.isnot(None)).all()
             print(f"전체 학생 수: {len(students)}")
         else:
-            # 특정 부트캠프 학생만 조회
-            students = Student.query.filter_by(bootcamp_id=bootcamp_id).all()
+            # 특정 부트캠프 학생만 정확하게 조회
+            students = Student.query.filter(
+                Student.bootcamp_id == bootcamp_id
+            ).all()
             print(f"부트캠프 {bootcamp_id}의 학생 수: {len(students)}")
         
         student_data = [student.to_dict() for student in students]
@@ -619,9 +622,9 @@ def update_bootcamp_student(bootcamp_id, student_id):
 if __name__ == '__main__':
     try:
         with app.app_context():
-            db.drop_all()  # 기존 테이블 삭제
-            db.create_all()  # 새로운 스키마로 테이블 생성
-            init_bootcamps()  # 부트캠프 초기 데이터 생성
+            db.drop_all()
+            db.create_all()
+            init_bootcamps()
 
         # 서버 시작
         port = int(os.environ.get('PORT', 10000))
