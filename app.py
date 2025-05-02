@@ -285,38 +285,63 @@ def detect_bootcamp_from_filename(filename):
 def parse_csv(file_path, bootcamp_id=None, batch_number=None):
     """CSV 파일 파싱 및 데이터베이스 저장"""
     try:
-        df = pd.read_csv(file_path)
+        print(f"\n=== CSV 파싱 시작 ===")
+        print(f"파일 경로: {file_path}")
+        print(f"부트캠프 ID: {bootcamp_id}")
+        print(f"기수: {batch_number}")
+        
+        # CSV 파일 읽기 (한글 인코딩 지원)
+        df = pd.read_csv(file_path, encoding='utf-8-sig')
+        
+        # 데이터프레임 정보 출력
+        print(f"\n데이터프레임 정보:")
+        print(f"컬럼: {df.columns.tolist()}")
+        print(f"행 수: {len(df)}")
+        
         students_data = []
         
-        print(f"CSV 파싱 시작 - 부트캠프: {bootcamp_id}, 기수: {batch_number}")
+        for index, row in df.iterrows():
+            try:
+                student = Student(
+                    name=str(row.get('이름', '')).strip(),
+                    gender=str(row.get('성별', '')).strip(),
+                    age=int(row.get('나이', 0)) if pd.notna(row.get('나이')) else 0,
+                    phone=str(row.get('전화번호', '')).strip(),
+                    email=str(row.get('이메일', '')).strip(),
+                    bootcamp_id=bootcamp_id,
+                    batch_number=batch_number,
+                    status='접수',
+                    considering_reason=str(row.get('지원동기', '')).strip()
+                )
+                students_data.append(student)
+                if index == 0:  # 첫 번째 행의 데이터 출력
+                    print(f"\n첫 번째 학생 데이터:")
+                    print(f"이름: {student.name}")
+                    print(f"부트캠프: {student.bootcamp_id}")
+                    print(f"기수: {student.batch_number}")
+            except Exception as row_error:
+                print(f"행 {index} 처리 중 오류: {str(row_error)}")
+                continue
         
-        for _, row in df.iterrows():
-            student = Student(
-                name=row.get('이름', ''),
-                gender=row.get('성별', ''),
-                age=row.get('나이', 0),
-                phone=row.get('전화번호', ''),
-                email=row.get('이메일', ''),
-                bootcamp_id=bootcamp_id,
-                batch_number=batch_number,
-                status='접수',
-                considering_reason=row.get('지원동기', '')
-            )
-            students_data.append(student)
+        print(f"\n총 {len(students_data)}명의 학생 데이터 파싱 완료")
         
         # 데이터베이스에 저장
         try:
             db.session.bulk_save_objects(students_data)
             db.session.commit()
-            print(f"데이터베이스 저장 성공 - {len(students_data)}명의 학생 데이터")
+            print(f"데이터베이스 저장 성공")
             return students_data
-        except Exception as e:
+        except Exception as db_error:
             db.session.rollback()
-            print(f"데이터베이스 저장 실패: {str(e)}")
+            print(f"데이터베이스 저장 실패: {str(db_error)}")
             raise
             
     except Exception as e:
-        print(f"CSV 파싱 실패: {str(e)}")
+        print(f"CSV 파싱 중 오류 발생: {str(e)}")
+        print(f"파일 존재 여부: {os.path.exists(file_path)}")
+        if os.path.exists(file_path):
+            with open(file_path, 'r', encoding='utf-8') as f:
+                print(f"파일 내용 미리보기: {f.readline()}")
         raise
 
 # 라우트 정의
@@ -336,25 +361,36 @@ def upload_file():
         return jsonify({"error": "선택된 파일이 없습니다."}), 400
         
     if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(file_path)
-        
-        # 파일명에서 부트캠프와 기수 정보 추출
-        bootcamp_id, batch_number = detect_bootcamp_from_filename(filename)
-        print(f"파일 '{filename}'에서 감지된 부트캠프: {bootcamp_id}, 기수: {batch_number}")
-        
-        if not bootcamp_id or not batch_number:
-            return jsonify({"error": "파일명에서 부트캠프 정보를 추출할 수 없습니다."}), 400
-            
         try:
-            # 부트캠프와 기수 정보 검증
+            filename = secure_filename(file.filename)
+            
+            # 업로드 폴더가 없으면 생성
+            if not os.path.exists(app.config['UPLOAD_FOLDER']):
+                os.makedirs(app.config['UPLOAD_FOLDER'])
+            
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            print(f"\n=== 파일 업로드 ===")
+            print(f"원본 파일명: {file.filename}")
+            print(f"저장 파일명: {filename}")
+            print(f"저장 경로: {file_path}")
+            
+            file.save(file_path)
+            
+            # 파일명에서 부트캠프와 기수 정보 추출
+            bootcamp_id, batch_number = detect_bootcamp_from_filename(filename)
+            print(f"감지된 부트캠프: {bootcamp_id}, 기수: {batch_number}")
+            
+            if not bootcamp_id or not batch_number:
+                return jsonify({"error": "파일명에서 부트캠프 정보를 추출할 수 없습니다."}), 400
+                
+            # 부트캠프 존재 여부 확인
             bootcamp = Bootcamp.query.filter_by(id=bootcamp_id).first()
             if not bootcamp:
                 return jsonify({"error": f"존재하지 않는 부트캠프입니다: {bootcamp_id}"}), 400
-                
+            
             # CSV 파일 파싱 및 데이터 저장
             students = parse_csv(file_path, bootcamp_id, batch_number)
+            
             return jsonify({
                 "success": True,
                 "count": len(students),
@@ -363,6 +399,7 @@ def upload_file():
             })
             
         except Exception as e:
+            print(f"파일 처리 중 오류 발생: {str(e)}")
             return jsonify({"error": str(e)}), 500
             
     return jsonify({"error": "지원되지 않는 파일 형식입니다."}), 400
