@@ -1,0 +1,11 @@
+flask
+flask-cors
+psycopg2-binary
+pandas
+openpyxl
+numpy
+werkzeug
+python-dotenv
+gunicorn
+flask-sqlalchemy>=3.0.0
+sqlalchemy>=2.0.0

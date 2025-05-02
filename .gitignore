@@ -1,0 +1,18 @@
+# 환경 변수
+.env
+
+# 업로드 파일
+uploads/
+
+# 파이썬 캐시 파일
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 가상 환경
+venv/
+env/
+LLFAQ/
+
+# 로그 파일
+*.log
