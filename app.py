@@ -354,94 +354,145 @@ def index():
 def upload_file():
     """파일 업로드 API"""
     try:
+        print("\n=== 파일 업로드 시작 ===")
+        
         if 'file' not in request.files:
+            print("파일이 요청에 없음")
             return jsonify({"error": "파일이 업로드되지 않았습니다."}), 400
             
         file = request.files['file']
         if file.filename == '':
+            print("파일명이 비어있음")
             return jsonify({"error": "선택된 파일이 없습니다."}), 400
             
         if file and allowed_file(file.filename):
-            filename = secure_filename(file.filename)
-            
-            # 임시 파일로 저장
-            temp_path = os.path.join('/tmp', filename)
-            file.save(temp_path)
-            
-            print(f"\n=== 파일 업로드 시작 ===")
-            print(f"파일명: {filename}")
-            
-            # 파일명에서 부트캠프와 기수 정보 추출
-            bootcamp_id, batch_number = detect_bootcamp_from_filename(filename)
-            print(f"감지된 부트캠프: {bootcamp_id}, 기수: {batch_number}")
-            
-            if not bootcamp_id or not batch_number:
-                os.remove(temp_path)
-                return jsonify({"error": "파일명에서 부트캠프 정보를 추출할 수 없습니다."}), 400
-                
-            # 부트캠프 존재 여부 확인
-            bootcamp = Bootcamp.query.filter_by(id=bootcamp_id).first()
-            if not bootcamp:
-                os.remove(temp_path)
-                return jsonify({"error": f"존재하지 않는 부트캠프입니다: {bootcamp_id}"}), 400
-            
             try:
-                # CSV 파일 읽기
-                df = pd.read_csv(temp_path, encoding='utf-8-sig')
-                print(f"CSV 파일 읽기 성공: {len(df)} 행")
+                # 파일 내용 확인
+                content = file.read()
+                file.seek(0)  # 파일 포인터를 다시 처음으로
+                print(f"파일 크기: {len(content)} bytes")
+                print(f"파일 내용 미리보기: {content[:200]}")
                 
-                # 데이터프레임 컬럼 확인
-                print(f"CSV 컬럼: {df.columns.tolist()}")
+                filename = secure_filename(file.filename)
+                print(f"처리할 파일명: {filename}")
                 
-                students_data = []
-                for _, row in df.iterrows():
-                    try:
-                        student = Student(
-                            name=str(row['이름']).strip(),
-                            gender=str(row.get('성별', '')).strip(),
-                            age=int(float(row['나이'])) if pd.notna(row.get('나이')) else 0,
-                            phone=str(row.get('전화번호', '')).strip(),
-                            email=str(row.get('이메일', '')).strip(),
-                            bootcamp_id=bootcamp_id,
-                            batch_number=batch_number,
-                            status='접수',
-                            considering_reason=str(row.get('지원동기', '')).strip()
-                        )
-                        students_data.append(student)
-                    except Exception as row_error:
-                        print(f"행 처리 중 오류: {str(row_error)}")
-                        continue
+                # 임시 파일로 저장
+                temp_path = os.path.join('/tmp', filename)
+                file.save(temp_path)
+                print(f"임시 파일 저장 완료: {temp_path}")
                 
-                print(f"처리된 학생 수: {len(students_data)}")
+                # 파일 저장 확인
+                if not os.path.exists(temp_path):
+                    print("임시 파일이 생성되지 않음")
+                    return jsonify({"error": "파일 저장 실패"}), 500
                 
-                # 데이터베이스에 저장
-                if students_data:
-                    db.session.bulk_save_objects(students_data)
-                    db.session.commit()
-                    print(f"데이터베이스 저장 성공")
-                else:
-                    print("저장할 데이터가 없습니다")
+                # 파일명에서 부트캠프와 기수 정보 추출
+                bootcamp_id, batch_number = detect_bootcamp_from_filename(filename)
+                print(f"추출된 정보 - 부트캠프: {bootcamp_id}, 기수: {batch_number}")
+                
+                if not bootcamp_id or not batch_number:
+                    os.remove(temp_path)
+                    return jsonify({"error": "파일명에서 부트캠프 정보를 추출할 수 없습니다."}), 400
+                
+                # 부트캠프 존재 여부 확인
+                bootcamp = Bootcamp.query.filter_by(id=bootcamp_id).first()
+                if not bootcamp:
+                    os.remove(temp_path)
+                    return jsonify({"error": f"존재하지 않는 부트캠프입니다: {bootcamp_id}"}), 400
+                
+                # CSV 파일 읽기 시도
+                try:
+                    print("CSV 파일 읽기 시작")
+                    df = pd.read_csv(temp_path, encoding='utf-8-sig')
+                    print(f"CSV 읽기 성공 - 행 수: {len(df)}")
+                    print(f"컬럼 목록: {df.columns.tolist()}")
                     
-                os.remove(temp_path)
-                
-                return jsonify({
-                    "success": True,
-                    "count": len(students_data),
-                    "bootcamp": bootcamp_id,
-                    "batch": batch_number
-                })
-                
+                    if len(df) == 0:
+                        print("CSV 파일에 데이터가 없음")
+                        os.remove(temp_path)
+                        return jsonify({"error": "CSV 파일에 데이터가 없습니다."}), 400
+                    
+                    # 필수 컬럼 확인
+                    required_columns = ['이름', '성별', '나이', '전화번호', '이메일']
+                    missing_columns = [col for col in required_columns if col not in df.columns]
+                    if missing_columns:
+                        print(f"필수 컬럼 누락: {missing_columns}")
+                        os.remove(temp_path)
+                        return jsonify({"error": f"필수 컬럼이 누락되었습니다: {', '.join(missing_columns)}"}), 400
+                    
+                    # 데이터 처리
+                    students_data = []
+                    for index, row in df.iterrows():
+                        try:
+                            student = Student(
+                                name=str(row['이름']).strip(),
+                                gender=str(row['성별']).strip(),
+                                age=int(float(row['나이'])) if pd.notna(row['나이']) else 0,
+                                phone=str(row['전화번호']).strip(),
+                                email=str(row['이메일']).strip(),
+                                bootcamp_id=bootcamp_id,
+                                batch_number=batch_number,
+                                status='접수',
+                                considering_reason=str(row.get('지원동기', '')).strip()
+                            )
+                            students_data.append(student)
+                            if index == 0:
+                                print(f"첫 번째 학생 데이터 샘플:")
+                                print(f"이름: {student.name}")
+                                print(f"이메일: {student.email}")
+                                print(f"부트캠프: {student.bootcamp_id}")
+                                print(f"기수: {student.batch_number}")
+                        except Exception as row_error:
+                            print(f"행 {index} 처리 중 오류: {str(row_error)}")
+                            continue
+                    
+                    print(f"처리된 총 학생 수: {len(students_data)}")
+                    
+                    # 데이터베이스 저장
+                    if students_data:
+                        try:
+                            print("데이터베이스 저장 시작")
+                            db.session.bulk_save_objects(students_data)
+                            db.session.commit()
+                            print("데이터베이스 저장 완료")
+                        except Exception as db_error:
+                            print(f"데이터베이스 저장 실패: {str(db_error)}")
+                            db.session.rollback()
+                            os.remove(temp_path)
+                            return jsonify({"error": f"데이터베이스 저장 실패: {str(db_error)}"}), 500
+                    
+                    # 임시 파일 삭제
+                    os.remove(temp_path)
+                    
+                    return jsonify({
+                        "success": True,
+                        "count": len(students_data),
+                        "bootcamp": bootcamp_id,
+                        "batch": batch_number
+                    })
+                    
+                except pd.errors.EmptyDataError:
+                    print("빈 CSV 파일")
+                    os.remove(temp_path)
+                    return jsonify({"error": "CSV 파일이 비어있습니다."}), 400
+                except Exception as csv_error:
+                    print(f"CSV 처리 중 오류: {str(csv_error)}")
+                    os.remove(temp_path)
+                    return jsonify({"error": f"CSV 파일 처리 실패: {str(csv_error)}"}), 500
+                    
             except Exception as e:
-                print(f"데이터 처리 중 오류: {str(e)}")
-                if os.path.exists(temp_path):
+                print(f"파일 처리 중 일반 오류: {str(e)}")
+                if 'temp_path' in locals() and os.path.exists(temp_path):
                     os.remove(temp_path)
                 return jsonify({"error": str(e)}), 500
                 
+        else:
+            print(f"지원되지 않는 파일 형식: {file.filename}")
+            return jsonify({"error": "지원되지 않는 파일 형식입니다."}), 400
+            
     except Exception as e:
-        print(f"파일 업로드 중 오류: {str(e)}")
+        print(f"최상위 오류 발생: {str(e)}")
         return jsonify({"error": str(e)}), 500
-        
-    return jsonify({"error": "지원되지 않는 파일 형식입니다."}), 400
 
 @app.route('/api/students', methods=['GET'])
 def get_students():
