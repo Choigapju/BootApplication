@@ -353,55 +353,81 @@ def index():
 @app.route('/api/upload', methods=['POST'])
 def upload_file():
     """파일 업로드 API"""
-    if 'file' not in request.files:
-        return jsonify({"error": "파일이 업로드되지 않았습니다."}), 400
-        
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({"error": "선택된 파일이 없습니다."}), 400
-        
-    if file and allowed_file(file.filename):
-        try:
+    try:
+        if 'file' not in request.files:
+            return jsonify({"error": "파일이 업로드되지 않았습니다."}), 400
+            
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({"error": "선택된 파일이 없습니다."}), 400
+            
+        if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             
-            # 업로드 폴더가 없으면 생성
-            if not os.path.exists(app.config['UPLOAD_FOLDER']):
-                os.makedirs(app.config['UPLOAD_FOLDER'])
-            
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-            print(f"\n=== 파일 업로드 ===")
-            print(f"원본 파일명: {file.filename}")
-            print(f"저장 파일명: {filename}")
-            print(f"저장 경로: {file_path}")
-            
-            file.save(file_path)
+            # 임시 파일로 저장
+            temp_path = os.path.join('/tmp', filename)
+            file.save(temp_path)
             
             # 파일명에서 부트캠프와 기수 정보 추출
             bootcamp_id, batch_number = detect_bootcamp_from_filename(filename)
-            print(f"감지된 부트캠프: {bootcamp_id}, 기수: {batch_number}")
             
             if not bootcamp_id or not batch_number:
+                os.remove(temp_path)  # 임시 파일 삭제
                 return jsonify({"error": "파일명에서 부트캠프 정보를 추출할 수 없습니다."}), 400
                 
             # 부트캠프 존재 여부 확인
             bootcamp = Bootcamp.query.filter_by(id=bootcamp_id).first()
             if not bootcamp:
+                os.remove(temp_path)  # 임시 파일 삭제
                 return jsonify({"error": f"존재하지 않는 부트캠프입니다: {bootcamp_id}"}), 400
             
-            # CSV 파일 파싱 및 데이터 저장
-            students = parse_csv(file_path, bootcamp_id, batch_number)
+            # CSV 파일 청크 단위로 처리
+            chunk_size = 100  # 한 번에 처리할 행 수
+            total_count = 0
+            
+            for chunk in pd.read_csv(temp_path, encoding='utf-8-sig', chunksize=chunk_size):
+                students_data = []
+                
+                for _, row in chunk.iterrows():
+                    student = Student(
+                        name=str(row.get('이름', '')).strip(),
+                        gender=str(row.get('성별', '')).strip(),
+                        age=int(row.get('나이', 0)) if pd.notna(row.get('나이')) else 0,
+                        phone=str(row.get('전화번호', '')).strip(),
+                        email=str(row.get('이메일', '')).strip(),
+                        bootcamp_id=bootcamp_id,
+                        batch_number=batch_number,
+                        status='접수',
+                        considering_reason=str(row.get('지원동기', '')).strip()
+                    )
+                    students_data.append(student)
+                
+                # 청크 단위로 데이터베이스에 저장
+                try:
+                    db.session.bulk_save_objects(students_data)
+                    db.session.commit()
+                    total_count += len(students_data)
+                except Exception as e:
+                    db.session.rollback()
+                    os.remove(temp_path)  # 임시 파일 삭제
+                    return jsonify({"error": f"데이터베이스 저장 실패: {str(e)}"}), 500
+            
+            # 임시 파일 삭제
+            os.remove(temp_path)
             
             return jsonify({
                 "success": True,
-                "count": len(students),
+                "count": total_count,
                 "bootcamp": bootcamp_id,
                 "batch": batch_number
             })
             
-        except Exception as e:
-            print(f"파일 처리 중 오류 발생: {str(e)}")
-            return jsonify({"error": str(e)}), 500
-            
+    except Exception as e:
+        # 에러 발생 시 임시 파일이 존재하면 삭제
+        if 'temp_path' in locals() and os.path.exists(temp_path):
+            os.remove(temp_path)
+        return jsonify({"error": str(e)}), 500
+        
     return jsonify({"error": "지원되지 않는 파일 형식입니다."}), 400
 
 @app.route('/api/students', methods=['GET'])
@@ -599,15 +625,13 @@ def update_bootcamp_student(bootcamp_id, student_id):
     
     return jsonify(student.to_dict())
 
-if __name__ == '__main__':
-    try:
-        with app.app_context():
-            db.drop_all()
-            db.create_all()
-            init_bootcamps()
+# 서버 설정 추가
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 최대 16MB 파일 크기 제한
+app.config['SQLALCHEMY_POOL_SIZE'] = 10
+app.config['SQLALCHEMY_MAX_OVERFLOW'] = 20
+app.config['SQLALCHEMY_POOL_TIMEOUT'] = 30
 
-        # 서버 시작
-        port = int(os.environ.get('PORT', 10000))
-        app.run(host='0.0.0.0', port=port, debug=False)
-    except Exception as e:
-        print(f"서버 시작 중 오류 발생: {e}")
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
+    app.run(host='0.0.0.0', port=10000)
