@@ -368,64 +368,77 @@ def upload_file():
             temp_path = os.path.join('/tmp', filename)
             file.save(temp_path)
             
+            print(f"\n=== 파일 업로드 시작 ===")
+            print(f"파일명: {filename}")
+            
             # 파일명에서 부트캠프와 기수 정보 추출
             bootcamp_id, batch_number = detect_bootcamp_from_filename(filename)
+            print(f"감지된 부트캠프: {bootcamp_id}, 기수: {batch_number}")
             
             if not bootcamp_id or not batch_number:
-                os.remove(temp_path)  # 임시 파일 삭제
+                os.remove(temp_path)
                 return jsonify({"error": "파일명에서 부트캠프 정보를 추출할 수 없습니다."}), 400
                 
             # 부트캠프 존재 여부 확인
             bootcamp = Bootcamp.query.filter_by(id=bootcamp_id).first()
             if not bootcamp:
-                os.remove(temp_path)  # 임시 파일 삭제
+                os.remove(temp_path)
                 return jsonify({"error": f"존재하지 않는 부트캠프입니다: {bootcamp_id}"}), 400
             
-            # CSV 파일 청크 단위로 처리
-            chunk_size = 100  # 한 번에 처리할 행 수
-            total_count = 0
-            
-            for chunk in pd.read_csv(temp_path, encoding='utf-8-sig', chunksize=chunk_size):
+            try:
+                # CSV 파일 읽기
+                df = pd.read_csv(temp_path, encoding='utf-8-sig')
+                print(f"CSV 파일 읽기 성공: {len(df)} 행")
+                
+                # 데이터프레임 컬럼 확인
+                print(f"CSV 컬럼: {df.columns.tolist()}")
+                
                 students_data = []
+                for _, row in df.iterrows():
+                    try:
+                        student = Student(
+                            name=str(row['이름']).strip(),
+                            gender=str(row.get('성별', '')).strip(),
+                            age=int(float(row['나이'])) if pd.notna(row.get('나이')) else 0,
+                            phone=str(row.get('전화번호', '')).strip(),
+                            email=str(row.get('이메일', '')).strip(),
+                            bootcamp_id=bootcamp_id,
+                            batch_number=batch_number,
+                            status='접수',
+                            considering_reason=str(row.get('지원동기', '')).strip()
+                        )
+                        students_data.append(student)
+                    except Exception as row_error:
+                        print(f"행 처리 중 오류: {str(row_error)}")
+                        continue
                 
-                for _, row in chunk.iterrows():
-                    student = Student(
-                        name=str(row.get('이름', '')).strip(),
-                        gender=str(row.get('성별', '')).strip(),
-                        age=int(row.get('나이', 0)) if pd.notna(row.get('나이')) else 0,
-                        phone=str(row.get('전화번호', '')).strip(),
-                        email=str(row.get('이메일', '')).strip(),
-                        bootcamp_id=bootcamp_id,
-                        batch_number=batch_number,
-                        status='접수',
-                        considering_reason=str(row.get('지원동기', '')).strip()
-                    )
-                    students_data.append(student)
+                print(f"처리된 학생 수: {len(students_data)}")
                 
-                # 청크 단위로 데이터베이스에 저장
-                try:
+                # 데이터베이스에 저장
+                if students_data:
                     db.session.bulk_save_objects(students_data)
                     db.session.commit()
-                    total_count += len(students_data)
-                except Exception as e:
-                    db.session.rollback()
-                    os.remove(temp_path)  # 임시 파일 삭제
-                    return jsonify({"error": f"데이터베이스 저장 실패: {str(e)}"}), 500
-            
-            # 임시 파일 삭제
-            os.remove(temp_path)
-            
-            return jsonify({
-                "success": True,
-                "count": total_count,
-                "bootcamp": bootcamp_id,
-                "batch": batch_number
-            })
-            
+                    print(f"데이터베이스 저장 성공")
+                else:
+                    print("저장할 데이터가 없습니다")
+                    
+                os.remove(temp_path)
+                
+                return jsonify({
+                    "success": True,
+                    "count": len(students_data),
+                    "bootcamp": bootcamp_id,
+                    "batch": batch_number
+                })
+                
+            except Exception as e:
+                print(f"데이터 처리 중 오류: {str(e)}")
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+                return jsonify({"error": str(e)}), 500
+                
     except Exception as e:
-        # 에러 발생 시 임시 파일이 존재하면 삭제
-        if 'temp_path' in locals() and os.path.exists(temp_path):
-            os.remove(temp_path)
+        print(f"파일 업로드 중 오류: {str(e)}")
         return jsonify({"error": str(e)}), 500
         
     return jsonify({"error": "지원되지 않는 파일 형식입니다."}), 400
@@ -485,28 +498,40 @@ def get_bootcamp(bootcamp_id):
 
 @app.route('/api/bootcamps/<string:bootcamp_id>/students', methods=['GET'])
 def get_bootcamp_students(bootcamp_id):
-    """부트캠프별 학생 데이터 가져오기"""
+    """특정 부트캠프의 학생 목록 조회"""
     try:
-        print(f"\n=== 학생 데이터 조회 시작: bootcamp_id={bootcamp_id} ===")
+        print(f"\n=== 부트캠프 학생 조회 ===")
+        print(f"요청된 부트캠프: {bootcamp_id}")
         
-        if bootcamp_id == 'all':
-            # 부트캠프 ID가 있는 학생만 조회
-            students = Student.query.filter(Student.bootcamp_id.isnot(None)).all()
-            print(f"전체 학생 수: {len(students)}")
+        # 'all'인 경우 모든 학생 조회, 그 외에는 특정 부트캠프 학생만 조회
+        if bootcamp_id != 'all':
+            students = Student.query.filter_by(bootcamp_id=bootcamp_id).all()
         else:
-            # 특정 부트캠프 학생만 정확하게 조회
-            students = Student.query.filter(
-                Student.bootcamp_id == bootcamp_id
-            ).all()
-            print(f"부트캠프 {bootcamp_id}의 학생 수: {len(students)}")
+            students = Student.query.all()
+            
+        print(f"조회된 학생 수: {len(students)}")
         
-        student_data = [student.to_dict() for student in students]
-        print(f"=== 학생 데이터 조회 완료 ===\n")
+        result = []
+        for student in students:
+            result.append({
+                'id': student.id,
+                'name': student.name,
+                'gender': student.gender,
+                'age': student.age,
+                'phone': student.phone,
+                'email': student.email,
+                'bootcamp_id': student.bootcamp_id,
+                'batch_number': student.batch_number,
+                'status': student.status,
+                'considering_reason': student.considering_reason,
+                'last_contact_date': student.last_contact_date.isoformat() if student.last_contact_date else None,
+                'notes': student.notes
+            })
         
-        return jsonify(student_data)
+        return jsonify(result)
         
     except Exception as e:
-        print(f"학생 데이터 조회 중 오류 발생: {e}")
+        print(f"학생 조회 중 오류 발생: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/bootcamps/<string:bootcamp_id>/upload', methods=['POST'])
