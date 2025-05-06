@@ -570,38 +570,19 @@ def get_bootcamp(bootcamp_id):
 
 @app.route('/api/bootcamps/<string:bootcamp_id>/students', methods=['GET'])
 def get_bootcamp_students(bootcamp_id):
-    """특정 부트캠프의 학생 목록 조회"""
     try:
-        logger.info("\n=== 부트캠프 학생 조회 ===")
-        logger.info(f"요청된 부트캠프: {bootcamp_id}")
-        
-        # 부트캠프 ID 유효성 검사
-        if bootcamp_id != 'all':
-            bootcamp = Bootcamp.query.filter_by(id=bootcamp_id).first()
-            if not bootcamp:
-                logger.error(f"존재하지 않는 부트캠프 ID: {bootcamp_id}")
-                return jsonify({"error": "존재하지 않는 부트캠프입니다."}), 404
-        
-        # 'all'인 경우에만 모든 학생 조회
         if bootcamp_id == 'all':
             students = Student.query.all()
         else:
-            # 특정 부트캠프의 학생만 조회
             students = Student.query.filter_by(bootcamp_id=bootcamp_id).all()
-            
-        logger.info(f"조회된 학생 수: {len(students)}")
-        
         result = []
         for student in students:
-            # 전화번호 형식화
-            formatted_phone = format_phone(student.phone)
-            
             result.append({
                 'id': student.id,
                 'name': student.name,
                 'gender': student.gender,
                 'age': student.age,
-                'phone': formatted_phone,
+                'phone': format_phone(student.phone),  # 반드시 format_phone 사용
                 'email': student.email,
                 'bootcamp_id': student.bootcamp_id,
                 'batch_number': student.batch_number,
@@ -610,11 +591,8 @@ def get_bootcamp_students(bootcamp_id):
                 'last_contact_date': student.last_contact_date.isoformat() if student.last_contact_date else None,
                 'notes': student.notes
             })
-        
         return jsonify(result)
-        
     except Exception as e:
-        logger.error(f"학생 조회 중 오류 발생: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/bootcamps/<string:bootcamp_id>/upload', methods=['POST'])
