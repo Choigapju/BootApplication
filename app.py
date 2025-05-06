@@ -575,11 +575,12 @@ def get_bootcamp_students(bootcamp_id):
         logger.info("\n=== 부트캠프 학생 조회 ===")
         logger.info(f"요청된 부트캠프: {bootcamp_id}")
         
-        # 'all'인 경우 모든 학생 조회, 그 외에는 특정 부트캠프 학생만 조회
-        if bootcamp_id != 'all':
-            students = Student.query.filter_by(bootcamp_id=bootcamp_id).all()
-        else:
+        # 'all'인 경우에만 모든 학생 조회
+        if bootcamp_id == 'all':
             students = Student.query.all()
+        else:
+            # 특정 부트캠프의 학생만 조회
+            students = Student.query.filter_by(bootcamp_id=bootcamp_id).all()
             
         logger.info(f"조회된 학생 수: {len(students)}")
         
