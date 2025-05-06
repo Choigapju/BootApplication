@@ -214,17 +214,17 @@ def format_phone(phone):
     if not phone:
         return ''
     
-    # 문자열로 변환
-    phone = str(phone)
-    # 숫자와 하이픈만 남기기
-    formatted_phone = re.sub(r'[^0-9\-]', '', phone)
-    # 하이픈이 없는 경우 형식 변환
-    if '-' not in formatted_phone:
-        if len(formatted_phone) == 11:  # 01012345678
-            formatted_phone = f"{formatted_phone[:3]}-{formatted_phone[3:7]}-{formatted_phone[7:]}"
-        elif len(formatted_phone) == 10:  # 0101234567
-            formatted_phone = f"0{formatted_phone[:2]}-{formatted_phone[2:6]}-{formatted_phone[6:]}"
-    return formatted_phone
+    # 문자열로 변환하고 숫자만 추출
+    phone = ''.join(filter(str.isdigit, str(phone)))
+    
+    # 11자리 번호인 경우 (01012345678)
+    if len(phone) == 11:
+        return f"{phone[:3]}-{phone[3:7]}-{phone[7:]}"
+    # 10자리 번호인 경우 (0101234567)
+    elif len(phone) == 10:
+        return f"{phone[:3]}-{phone[3:6]}-{phone[6:]}"
+    # 그 외의 경우는 원본 반환
+    return phone
 
 def init_bootcamps():
     """부트캠프 초기 데이터 설정"""
