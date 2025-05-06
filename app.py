@@ -223,7 +223,7 @@ def format_phone(phone):
         if len(formatted_phone) == 11:  # 01012345678
             formatted_phone = f"{formatted_phone[:3]}-{formatted_phone[3:7]}-{formatted_phone[7:]}"
         elif len(formatted_phone) == 10:  # 0101234567
-            formatted_phone = f"0{formatted_phone[:2]}-{formatted_phone[2:5]}-{formatted_phone[5:]}"
+            formatted_phone = f"0{formatted_phone[:2]}-{formatted_phone[2:6]}-{formatted_phone[6:]}"
     return formatted_phone
 
 def init_bootcamps():
@@ -575,6 +575,13 @@ def get_bootcamp_students(bootcamp_id):
         logger.info("\n=== 부트캠프 학생 조회 ===")
         logger.info(f"요청된 부트캠프: {bootcamp_id}")
         
+        # 부트캠프 ID 유효성 검사
+        if bootcamp_id != 'all':
+            bootcamp = Bootcamp.query.filter_by(id=bootcamp_id).first()
+            if not bootcamp:
+                logger.error(f"존재하지 않는 부트캠프 ID: {bootcamp_id}")
+                return jsonify({"error": "존재하지 않는 부트캠프입니다."}), 404
+        
         # 'all'인 경우에만 모든 학생 조회
         if bootcamp_id == 'all':
             students = Student.query.all()
@@ -586,12 +593,15 @@ def get_bootcamp_students(bootcamp_id):
         
         result = []
         for student in students:
+            # 전화번호 형식화
+            formatted_phone = format_phone(student.phone)
+            
             result.append({
                 'id': student.id,
                 'name': student.name,
                 'gender': student.gender,
                 'age': student.age,
-                'phone': student.phone,
+                'phone': formatted_phone,
                 'email': student.email,
                 'bootcamp_id': student.bootcamp_id,
                 'batch_number': student.batch_number,
