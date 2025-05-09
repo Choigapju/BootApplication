@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Python
 __pycache__/
 *.py[cod]
@@ -28,3 +29,23 @@ instance/
 # OS
 .DS_Store
 Thumbs.db
+=======
+# 환경 변수
+.env
+
+# 업로드 파일
+uploads/
+
+# 파이썬 캐시 파일
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 가상 환경
+venv/
+env/
+LLFAQ/
+
+# 로그 파일
+*.log
+>>>>>>> a2f9ed711af45dd3174a43e2727f84c599c815ae

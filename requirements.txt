@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 Flask>=2.3.2
 SQLAlchemy>=2.0.19
 Flask-SQLAlchemy>=3.0.5
@@ -7,3 +8,16 @@ Flask-CORS>=4.0.0
 gunicorn>=21.0.0
 matplotlib>=3.7.1
 pandas>=2.0.3
+=======
+flask
+flask-cors
+psycopg2-binary
+pandas
+openpyxl
+numpy
+werkzeug
+python-dotenv
+gunicorn
+flask-sqlalchemy>=3.0.0
+sqlalchemy>=2.0.0
+>>>>>>> a2f9ed711af45dd3174a43e2727f84c599c815ae
