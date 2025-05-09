@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>부트캠프 지원 현황</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .upload-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        .statistics-table {
+            margin-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">부트캠프 지원 현황</a>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <!-- CSV 업로드 폼 -->
+        <div class="upload-container">
+            <h2 class="text-center mb-4">지원자 데이터 업로드</h2>
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label for="file" class="form-label">CSV 파일 선택</label>
+                    <input type="file" class="form-control" id="file" accept=".csv" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">업로드</button>
+            </form>
+        </div>
+
+        <!-- 부트캠프/기수별 지원자 리스트 조회 UI -->
+        <div class="mt-5">
+            <h3>부트캠프/기수별 지원자 리스트 조회</h3>
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label for="bootcampSelect" class="form-label">부트캠프</label>
+                    <select id="bootcampSelect" class="form-select"></select>
+                </div>
+                <div class="col-md-4">
+                    <label for="batchSelect" class="form-label">기수</label>
+                    <select id="batchSelect" class="form-select"></select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button id="fetchStudentsBtn" class="btn btn-success w-100">지원자 조회</button>
+                </div>
+            </div>
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>이름</th>
+                        <th>이메일</th>
+                        <th>성별</th>
+                        <th>나이</th>
+                        <th>전화번호</th>
+                    </tr>
+                </thead>
+                <tbody id="studentsTable"></tbody>
+            </table>
+        </div>
+
+        <!-- 부트캠프별 지원 현황 통계 -->
+        <div class="statistics-table">
+            <h3 class="text-center mb-4">부트캠프별 지원 현황</h3>
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>부트캠프</th>
+                        <th>지원자 수</th>
+                        <th>비율</th>
+                    </tr>
+                </thead>
+                <tbody id="statisticsTable">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 통계 업데이트 함수
+        async function updateStatistics() {
+            try {
+                const response = await fetch('/api/students');
+                const data = await response.json();
+                const tableBody = document.getElementById('statisticsTable');
+                tableBody.innerHTML = '';
+                const bootcampStats = {};
+                data.students.forEach(student => {
+                    if (student.bootcamp_id) {
+                        bootcampStats[student.bootcamp_id] = (bootcampStats[student.bootcamp_id] || 0) + 1;
+                    }
+                });
+                const total = Object.values(bootcampStats).reduce((a, b) => a + b, 0);
+                for (const [bootcamp, count] of Object.entries(bootcampStats)) {
+                    const percentage = ((count / total) * 100).toFixed(1);
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${bootcamp}</td>
+                        <td>${count}명</td>
+                        <td>${percentage}%</td>
+                    `;
+                    tableBody.appendChild(row);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+        updateStatistics();
+
+        // 지원자 업로드 폼
+        document.getElementById('uploadForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData();
+            const fileInput = document.getElementById('file');
+            formData.append('file', fileInput.files[0]);
+            try {
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                if (response.ok) {
+                    alert('파일이 성공적으로 업로드되었습니다!');
+                    document.getElementById('uploadForm').reset();
+                    updateStatistics();
+                } else {
+                    const data = await response.json();
+                    alert(data.error || '파일 업로드 중 오류가 발생했습니다.');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('파일 업로드 중 오류가 발생했습니다.');
+            }
+        });
+
+        // 부트캠프/기수별 지원자 리스트 조회 기능
+        async function loadBootcamps() {
+            const res = await fetch('/api/bootcamps');
+            const bootcamps = await res.json();
+            const select = document.getElementById('bootcampSelect');
+            select.innerHTML = '';
+            bootcamps.forEach(bc => {
+                const option = document.createElement('option');
+                option.value = bc.id;
+                option.textContent = bc.name;
+                select.appendChild(option);
+            });
+            loadBatches();
+        }
+        async function loadBatches() {
+            const bootcampId = document.getElementById('bootcampSelect').value;
+            const res = await fetch(`/api/bootcamps/${bootcampId}/batches`);
+            const batches = await res.json();
+            const select = document.getElementById('batchSelect');
+            select.innerHTML = '';
+            batches.forEach(batch => {
+                const option = document.createElement('option');
+                option.value = batch;
+                option.textContent = batch;
+                select.appendChild(option);
+            });
+        }
+        async function fetchStudents() {
+            const bootcampId = document.getElementById('bootcampSelect').value;
+            const batchNumber = document.getElementById('batchSelect').value;
+            const res = await fetch(`/api/bootcamps/${bootcampId}/batch/${batchNumber}/students`);
+            const students = await res.json();
+            const tbody = document.getElementById('studentsTable');
+            tbody.innerHTML = '';
+            students.forEach(s => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${s.name}</td><td>${s.email}</td><td>${s.gender || ''}</td><td>${s.age || ''}</td><td>${s.phone || ''}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+        document.getElementById('bootcampSelect').addEventListener('change', loadBatches);
+        document.getElementById('fetchStudentsBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            fetchStudents();
+        });
+        // 초기 로딩
+        loadBootcamps();
+    </script>
+</body>
+</html>
