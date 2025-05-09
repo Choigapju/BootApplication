@@ -291,4 +291,4 @@ if __name__ == '__main__':
     
     # PORT 환경변수 사용
     port = int(os.getenv('PORT', 10000))
-    app.run(debug=True, port=port)
+    app.run(debug=True, port=port) # push 용 더미 주석
