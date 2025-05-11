@@ -252,10 +252,7 @@ def index():
 
 if __name__ == '__main__':
     with app.app_context():
-        # 기존 테이블 삭제 후 재생성
-        db.drop_all()  # 기존 테이블 삭제
-        db.create_all()  # 테이블 새로 생성
-        print("데이터베이스 테이블이 생성되었습니다.")
+        db.create_all()  # 테이블이 없을 때만 생성
     
     port = int(os.getenv('PORT', 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
