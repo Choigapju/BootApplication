@@ -37,26 +37,69 @@ class Student(db.Model):
 # CSV 업로드 및 DB 저장
 @app.route('/upload', methods=['POST'])
 def upload_csv():
-    file = request.files['file']
-    df = pd.read_csv(file)
-    for _, row in df.iterrows():
-        # 부트캠프/기수 정보 추출
-        bootcamp = Bootcamp.query.filter_by(name=row['bootcamp'], generation=row['generation']).first()
-        if not bootcamp:
-            bootcamp = Bootcamp(name=row['bootcamp'], generation=row['generation'])
-            db.session.add(bootcamp)
-            db.session.commit()
-        student = Student(
-            name=row['name'],
-            email=row['email'],
-            gender=row.get('gender', ''),
-            age=int(row['age']) if pd.notnull(row['age']) else None,
-            phone=row.get('phone', ''),
-            bootcamp_id=bootcamp.id
-        )
-        db.session.add(student)
-    db.session.commit()
-    return jsonify({'message': '업로드 및 저장 완료'})
+    try:
+        file = request.files['file']
+        # 파일명에서 기수 정보 추출 (kdt-design-5th_지원서_2024-05-11.csv -> 5th)
+        filename = file.filename
+        generation = filename.split('_')[0].split('-')[-1]  # kdt-design-5th -> 5th
+        
+        df = pd.read_csv(file)
+        
+        # CSV 파일의 컬럼명 확인을 위한 로깅
+        print("CSV 컬럼명:", df.columns.tolist())
+        print("추출된 기수:", generation)
+        
+        # 컬럼명 매핑 (실제 CSV 파일의 컬럼명에 맞게 수정)
+        column_mapping = {
+            'name': '가입 이름',
+            'email': '가입 이메일',
+            'gender': '성별',
+            'age': '생년월일',  # 생년월일에서 나이 계산
+            'phone': '가입 연락처'
+        }
+        
+        # 컬럼명 변경
+        df = df.rename(columns=column_mapping)
+        
+        for _, row in df.iterrows():
+            # 부트캠프/기수 정보 추출
+            bootcamp = Bootcamp.query.filter_by(
+                name='UXUI 디자인 부트캠프',  # 고정값
+                generation=generation  # 파일명에서 추출한 기수 사용
+            ).first()
+            
+            if not bootcamp:
+                bootcamp = Bootcamp(
+                    name='UXUI 디자인 부트캠프',
+                    generation=generation
+                )
+                db.session.add(bootcamp)
+                db.session.commit()
+            
+            # 생년월일에서 나이 계산
+            try:
+                birth_year = int(row['생년월일'].split('-')[0])
+                current_year = 2024  # 현재 연도
+                age = current_year - birth_year
+            except:
+                age = None
+            
+            student = Student(
+                name=row['가입 이름'],
+                email=row['가입 이메일'],
+                gender=row.get('성별', ''),
+                age=age,
+                phone=row.get('가입 연락처', ''),
+                bootcamp_id=bootcamp.id
+            )
+            db.session.add(student)
+        
+        db.session.commit()
+        return jsonify({'message': '업로드 및 저장 완료'})
+        
+    except Exception as e:
+        print("에러 발생:", str(e))
+        return jsonify({'error': str(e)}), 500
 
 # 부트캠프/기수별 지원자 리스트
 @app.route('/students', methods=['GET'])
