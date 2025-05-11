@@ -138,14 +138,13 @@ def get_students():
     results = []
     for student, bootcamp in query.all():
         results.append({
-            'id': student.id,
+            'bootcamp': bootcamp.name,
+            'generation': bootcamp.generation,
             'name': student.name,
             'email': student.email,
             'gender': student.gender,
             'age': student.age,
-            'phone': student.phone,
-            'bootcamp': bootcamp.name,
-            'generation': bootcamp.generation
+            'phone': student.phone
         })
     return jsonify(results)
 
@@ -162,6 +161,15 @@ def get_stats():
         'female': female,
         'avg_age': round(avg_age, 1) if avg_age else None
     })
+
+# 부트캠프/기수 목록 반환 API
+@app.route('/bootcamps', methods=['GET'])
+def get_bootcamps():
+    bootcamps = Bootcamp.query.all()
+    result = []
+    for b in bootcamps:
+        result.append({'name': b.name, 'generation': b.generation})
+    return jsonify(result)
 
 # 프론트엔드 테스트용 HTML
 @app.route('/')
@@ -180,12 +188,13 @@ def index():
         </form>
         <div id="uploadMessage"></div>
         <h2>지원자 조회</h2>
+        <div id="toolbar"></div>
         <label>부트캠프: <input type="text" id="bootcamp"></label>
         <label>기수: <input type="text" id="generation"></label>
         <button onclick="fetchStudents()">조회</button>
         <table border="1" id="studentsTable">
             <thead>
-                <tr><th>이름</th><th>이메일</th><th>성별</th><th>나이</th><th>전화번호</th><th>부트캠프</th><th>기수</th></tr>
+                <tr><th>부트캠프</th><th>기수</th><th>이름</th><th>이메일</th><th>성별</th><th>나이</th><th>전화번호</th></tr>
             </thead>
             <tbody></tbody>
         </table>
@@ -193,6 +202,30 @@ def index():
         <button onclick="fetchStats()">통계 조회</button>
         <div id="stats"></div>
         <script>
+        // 부트캠프/기수 툴바 생성
+        async function loadToolbar() {
+            const res = await fetch('/bootcamps');
+            const data = await res.json();
+            const toolbar = document.getElementById('toolbar');
+            toolbar.innerHTML = '';
+            // 중복 제거
+            const unique = Array.from(new Set(data.map(b => b.name + '||' + b.generation)))
+                .map(str => {
+                    const [name, generation] = str.split('||');
+                    return {name, generation};
+                });
+            unique.forEach(b => {
+                const btn = document.createElement('button');
+                btn.innerText = `${b.name} / ${b.generation}`;
+                btn.onclick = function() {
+                    document.getElementById('bootcamp').value = b.name;
+                    document.getElementById('generation').value = b.generation;
+                    fetchStudents();
+                };
+                toolbar.appendChild(btn);
+            });
+        }
+        document.addEventListener('DOMContentLoaded', loadToolbar);
         document.getElementById('uploadForm').onsubmit = async function(e) {
             e.preventDefault();
             const formData = new FormData(this);
@@ -202,6 +235,7 @@ def index():
                 if (res.ok) {
                     document.getElementById('uploadMessage').innerText = data.message;
                     document.getElementById('uploadMessage').style.color = 'green';
+                    loadToolbar(); // 업로드 후 툴바 갱신
                 } else {
                     document.getElementById('uploadMessage').innerText = data.error || '업로드 중 에러가 발생했습니다.';
                     document.getElementById('uploadMessage').style.color = 'red';
@@ -223,9 +257,8 @@ def index():
                 tbody.innerHTML = '';
                 data.forEach(s => {
                     tbody.innerHTML += `<tr>
-                        <td>${s.name}</td><td>${s.email}</td><td>${s.gender}</td>
+                        <td>${s.bootcamp}</td><td>${s.generation}</td><td>${s.name}</td><td>${s.email}</td><td>${s.gender}</td>
                         <td>${s.age}</td><td>${s.phone}</td>
-                        <td>${s.bootcamp}</td><td>${s.generation}</td>
                     </tr>`;
                 });
             } catch (error) {
