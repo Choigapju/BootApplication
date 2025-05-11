@@ -3,12 +3,15 @@ from flask import Flask, request, jsonify, render_template_string
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import pandas as pd
+from dotenv import load_dotenv
+
+load_dotenv()  # .env 파일 로드
 
 app = Flask(__name__)
 CORS(app)
 
-# 환경변수 또는 직접 입력
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:비밀번호@localhost:5432/bootcamp_db'
+# .env 파일의 DATABASE_URL 사용
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
