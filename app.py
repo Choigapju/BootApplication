@@ -39,15 +39,26 @@ class Student(db.Model):
 def upload_csv():
     try:
         file = request.files['file']
+        if not file:
+            return jsonify({'error': '파일이 없습니다.'}), 400
+            
         # 파일명에서 기수 정보 추출 (kdt-design-5th_지원서_2024-05-11.csv -> 5th)
         filename = file.filename
-        generation = filename.split('_')[0].split('-')[-1]  # kdt-design-5th -> 5th
+        print("업로드된 파일명:", filename)  # 디버깅용
         
-        df = pd.read_csv(file)
+        try:
+            generation = filename.split('_')[0].split('-')[-1]  # kdt-design-5th -> 5th
+            print("추출된 기수:", generation)  # 디버깅용
+        except Exception as e:
+            print("기수 추출 에러:", str(e))
+            return jsonify({'error': '파일명에서 기수를 추출할 수 없습니다.'}), 400
         
-        # CSV 파일의 컬럼명 확인을 위한 로깅
-        print("CSV 컬럼명:", df.columns.tolist())
-        print("추출된 기수:", generation)
+        try:
+            df = pd.read_csv(file)
+            print("CSV 컬럼명:", df.columns.tolist())  # 디버깅용
+        except Exception as e:
+            print("CSV 읽기 에러:", str(e))
+            return jsonify({'error': 'CSV 파일을 읽을 수 없습니다.'}), 400
         
         # 컬럼명 매핑 (실제 CSV 파일의 컬럼명에 맞게 수정)
         column_mapping = {
@@ -59,47 +70,60 @@ def upload_csv():
         }
         
         # 컬럼명 변경
-        df = df.rename(columns=column_mapping)
+        try:
+            df = df.rename(columns=column_mapping)
+        except Exception as e:
+            print("컬럼명 변경 에러:", str(e))
+            return jsonify({'error': 'CSV 파일의 컬럼명을 변경할 수 없습니다.'}), 400
         
         for _, row in df.iterrows():
-            # 부트캠프/기수 정보 추출
-            bootcamp = Bootcamp.query.filter_by(
-                name='UXUI 디자인 부트캠프',  # 고정값
-                generation=generation  # 파일명에서 추출한 기수 사용
-            ).first()
-            
-            if not bootcamp:
-                bootcamp = Bootcamp(
-                    name='UXUI 디자인 부트캠프',
-                    generation=generation
-                )
-                db.session.add(bootcamp)
-                db.session.commit()
-            
-            # 생년월일에서 나이 계산
             try:
-                birth_year = int(row['생년월일'].split('-')[0])
-                current_year = 2024  # 현재 연도
-                age = current_year - birth_year
-            except:
-                age = None
-            
-            student = Student(
-                name=row['가입 이름'],
-                email=row['가입 이메일'],
-                gender=row.get('성별', ''),
-                age=age,
-                phone=row.get('가입 연락처', ''),
-                bootcamp_id=bootcamp.id
-            )
-            db.session.add(student)
+                # 부트캠프/기수 정보 추출
+                bootcamp = Bootcamp.query.filter_by(
+                    name='UXUI 디자인 부트캠프',  # 고정값
+                    generation=generation  # 파일명에서 추출한 기수 사용
+                ).first()
+                
+                if not bootcamp:
+                    bootcamp = Bootcamp(
+                        name='UXUI 디자인 부트캠프',
+                        generation=generation
+                    )
+                    db.session.add(bootcamp)
+                    db.session.commit()
+                
+                # 생년월일에서 나이 계산
+                try:
+                    birth_year = int(row['생년월일'].split('-')[0])
+                    current_year = 2024  # 현재 연도
+                    age = current_year - birth_year
+                except:
+                    age = None
+                
+                student = Student(
+                    name=row['가입 이름'],
+                    email=row['가입 이메일'],
+                    gender=row.get('성별', ''),
+                    age=age,
+                    phone=row.get('가입 연락처', ''),
+                    bootcamp_id=bootcamp.id
+                )
+                db.session.add(student)
+            except Exception as e:
+                print("데이터 처리 에러:", str(e))
+                return jsonify({'error': f'데이터 처리 중 에러가 발생했습니다: {str(e)}'}), 500
         
-        db.session.commit()
-        return jsonify({'message': '업로드 및 저장 완료'})
+        try:
+            db.session.commit()
+            return jsonify({'message': '업로드 및 저장 완료'})
+        except Exception as e:
+            print("DB 저장 에러:", str(e))
+            db.session.rollback()
+            return jsonify({'error': '데이터베이스 저장 중 에러가 발생했습니다.'}), 500
         
     except Exception as e:
-        print("에러 발생:", str(e))
-        return jsonify({'error': str(e)}), 500
+        print("전체 에러:", str(e))
+        return jsonify({'error': f'처리 중 에러가 발생했습니다: {str(e)}'}), 500
 
 # 부트캠프/기수별 지원자 리스트
 @app.route('/students', methods=['GET'])
