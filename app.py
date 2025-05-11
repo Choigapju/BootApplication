@@ -178,6 +178,7 @@ def index():
             <input type="file" name="file" />
             <button type="submit">업로드</button>
         </form>
+        <div id="uploadMessage"></div>
         <h2>지원자 조회</h2>
         <label>부트캠프: <input type="text" id="bootcamp"></label>
         <label>기수: <input type="text" id="generation"></label>
@@ -195,30 +196,53 @@ def index():
         document.getElementById('uploadForm').onsubmit = async function(e) {
             e.preventDefault();
             const formData = new FormData(this);
-            const res = await fetch('/upload', {method: 'POST', body: formData});
-            alert((await res.json()).message);
+            try {
+                const res = await fetch('/upload', {method: 'POST', body: formData});
+                const data = await res.json();
+                if (res.ok) {
+                    document.getElementById('uploadMessage').innerText = data.message;
+                    document.getElementById('uploadMessage').style.color = 'green';
+                } else {
+                    document.getElementById('uploadMessage').innerText = data.error || '업로드 중 에러가 발생했습니다.';
+                    document.getElementById('uploadMessage').style.color = 'red';
+                }
+            } catch (error) {
+                document.getElementById('uploadMessage').innerText = '서버 연결 중 에러가 발생했습니다.';
+                document.getElementById('uploadMessage').style.color = 'red';
+                console.error('Upload error:', error);
+            }
         }
         async function fetchStudents() {
-            const bootcamp = document.getElementById('bootcamp').value;
-            const generation = document.getElementById('generation').value;
-            let url = `/students?bootcamp=${bootcamp}&generation=${generation}`;
-            const res = await fetch(url);
-            const data = await res.json();
-            const tbody = document.querySelector('#studentsTable tbody');
-            tbody.innerHTML = '';
-            data.forEach(s => {
-                tbody.innerHTML += `<tr>
-                    <td>${s.name}</td><td>${s.email}</td><td>${s.gender}</td>
-                    <td>${s.age}</td><td>${s.phone}</td>
-                    <td>${s.bootcamp}</td><td>${s.generation}</td>
-                </tr>`;
-            });
+            try {
+                const bootcamp = document.getElementById('bootcamp').value;
+                const generation = document.getElementById('generation').value;
+                let url = `/students?bootcamp=${bootcamp}&generation=${generation}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                const tbody = document.querySelector('#studentsTable tbody');
+                tbody.innerHTML = '';
+                data.forEach(s => {
+                    tbody.innerHTML += `<tr>
+                        <td>${s.name}</td><td>${s.email}</td><td>${s.gender}</td>
+                        <td>${s.age}</td><td>${s.phone}</td>
+                        <td>${s.bootcamp}</td><td>${s.generation}</td>
+                    </tr>`;
+                });
+            } catch (error) {
+                console.error('Fetch students error:', error);
+                alert('지원자 목록을 불러오는 중 에러가 발생했습니다.');
+            }
         }
         async function fetchStats() {
-            const res = await fetch('/stats');
-            const data = await res.json();
-            document.getElementById('stats').innerText =
-                `총원: ${data.total}, 남: ${data.male}, 여: ${data.female}, 평균나이: ${data.avg_age}`;
+            try {
+                const res = await fetch('/stats');
+                const data = await res.json();
+                document.getElementById('stats').innerText =
+                    `총원: ${data.total}, 남: ${data.male}, 여: ${data.female}, 평균나이: ${data.avg_age}`;
+            } catch (error) {
+                console.error('Fetch stats error:', error);
+                alert('통계를 불러오는 중 에러가 발생했습니다.');
+            }
         }
         </script>
     </body>
