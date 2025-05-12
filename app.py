@@ -191,6 +191,7 @@ def get_students():
             'status': student.status,
             'memo': student.memo
         })
+    await fetchStatusStats();
     return jsonify(results)
 
 # 전체 지원자 통계
@@ -429,6 +430,7 @@ def index():
                     `;
                     tbody.appendChild(tr);
                 });
+                await fetchStatusStats();
             } catch (error) {
                 console.error('Fetch students error:', error);
                 alert('지원자 목록을 불러오는 중 에러가 발생했습니다.');
@@ -455,6 +457,7 @@ def index():
             try {
                 await updateStudent(studentId, status, memo);
                 alert('성공적으로 저장되었습니다.');
+                await fetchStatusStats();
             } catch (error) {
                 console.error('Save error:', error);
             }
@@ -551,9 +554,7 @@ def index():
             // 표
             const tbody = document.querySelector('#statusTable tbody');
             tbody.innerHTML = '';
-            let total = 0;
             Object.entries(data).forEach(([status, count]) => {
-                total += count;
                 tbody.innerHTML += `<tr><td>${status}</td><td>${count}</td></tr>`;
             });
 
