@@ -320,8 +320,21 @@ def index():
             .status-HRD최종등록 { color: #9C27B0; }
             .status-지원취소 { color: #F44336; }
         </style>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     </head>
     <body>
+        <h2>통계</h2>
+        <div id="stats"></div>
+        <table border="1" id="statusTable" style="margin-bottom:20px;">
+            <thead>
+                <tr>
+                    <th>상태</th>
+                    <th>인원수</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <canvas id="statusPie" width="300" height="300"></canvas>
         <h2>CSV 업로드</h2>
         <form id="uploadForm" enctype="multipart/form-data">
             <input type="file" name="file" />
@@ -350,9 +363,6 @@ def index():
             </thead>
             <tbody></tbody>
         </table>
-        <h2>통계</h2>
-        <button onclick="fetchStats()">통계 조회</button>
-        <div id="stats"></div>
         <script>
         const STATUS_OPTIONS = ['지원중', '합격', '고민중', 'HRD최종등록', '지원취소'];
         
@@ -495,7 +505,7 @@ def index():
                                 alert(data.message);
                                 loadToolbar(); // 툴바 새로고침
                                 fetchStudents(); // 학생 목록 새로고침
-                                fetchStats(); // 통계 새로고침
+                                fetchStatusStats(); // 통계 새로고침
                             } else {
                                 alert(data.error || '삭제 중 에러가 발생했습니다.');
                             }
@@ -532,22 +542,61 @@ def index():
                 console.error('Upload error:', error);
             }
         }
-        async function fetchStats() {
-            try {
-                const res = await fetch('/stats');
-                const data = await res.json();
-                document.getElementById('stats').innerText =
-                    `총원: ${data.total}, 남: ${data.male}, 여: ${data.female}, 평균나이: ${data.avg_age}`;
-            } catch (error) {
-                console.error('Fetch stats error:', error);
-                alert('통계를 불러오는 중 에러가 발생했습니다.');
-            }
+        async function fetchStatusStats() {
+            const bootcamp = document.getElementById('bootcamp').value;
+            const generation = document.getElementById('generation').value;
+            const res = await fetch(`/stats_by_status?bootcamp=${bootcamp}&generation=${generation}`);
+            const data = await res.json();
+
+            // 표
+            const tbody = document.querySelector('#statusTable tbody');
+            tbody.innerHTML = '';
+            let total = 0;
+            Object.entries(data).forEach(([status, count]) => {
+                total += count;
+                tbody.innerHTML += `<tr><td>${status}</td><td>${count}</td></tr>`;
+            });
+
+            // 원그래프
+            const ctx = document.getElementById('statusPie').getContext('2d');
+            if(window.statusPieChart) window.statusPieChart.destroy();
+            window.statusPieChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(data),
+                    datasets: [{
+                        data: Object.values(data),
+                        backgroundColor: ['#2196F3','#4CAF50','#FF9800','#9C27B0','#F44336']
+                    }]
+                },
+                options: {
+                    responsive: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
         }
+        document.getElementById('bootcamp').addEventListener('change', fetchStatusStats);
+        document.getElementById('generation').addEventListener('change', fetchStatusStats);
         </script>
     </body>
     </html>
     '''
     return render_template_string(html)
+
+@app.route('/stats_by_status', methods=['GET'])
+def stats_by_status():
+    bootcamp = request.args.get('bootcamp')
+    generation = request.args.get('generation')
+    query = db.session.query(Student.status, db.func.count(Student.id)).join(Bootcamp)
+    if bootcamp:
+        query = query.filter(Bootcamp.name == bootcamp)
+    if generation:
+        query = query.filter(Bootcamp.generation == generation)
+    query = query.group_by(Student.status)
+    result = {status: count for status, count in query.all()}
+    return jsonify(result)
 
 if __name__ == '__main__':
     with app.app_context():
