@@ -32,7 +32,11 @@ class Student(db.Model):
     gender = db.Column(db.String(10))
     age = db.Column(db.Integer)
     phone = db.Column(db.String(30))
+    status = db.Column(db.String(20), default='지원중')  # 상태 필드 추가
+    memo = db.Column(db.Text)  # 메모 필드 추가
     bootcamp_id = db.Column(db.Integer, db.ForeignKey('bootcamps.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=db.func.now())  # 생성 시간
+    updated_at = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())  # 수정 시간
 
 # CSV 업로드 및 DB 저장
 @app.route('/upload', methods=['POST'])
@@ -62,7 +66,7 @@ def upload_csv():
                     'aiw' : 'AI 웹 부트캠프',
                     'android' : '안드로이드 부트캠프',
                     'ios' : '아이폰 앱 개발 부트캠프',
-                    'game' : '유니티 부트캠프',
+                    'ugm' : '유니티 부트캠프',
                     'data' : '데이터 분석 부트캠프',
                     'cloud' : '클라우드 부트캠프',
                 }
@@ -102,15 +106,27 @@ def upload_csv():
         
         for _, row in df.iterrows():
             try:
+                # 이메일과 전화번호로 중복 체크
+                existing_student = Student.query.join(Bootcamp).filter(
+                    Student.email == row['가입 이메일'],
+                    Student.phone == row.get('가입 연락처', ''),
+                    Bootcamp.name == bootcamp_name,
+                    Bootcamp.generation == generation
+                ).first()
+                
+                if existing_student:
+                    print(f"중복 지원자 발견: {row['가입 이름']} ({row['가입 이메일']})")
+                    continue  # 중복 지원자는 건너뜀
+                
                 # 부트캠프/기수 정보 추출
                 bootcamp = Bootcamp.query.filter_by(
-                    name=bootcamp_name,  # 매핑된 부트캠프 이름 사용
+                    name=bootcamp_name,
                     generation=generation
                 ).first()
                 
                 if not bootcamp:
                     bootcamp = Bootcamp(
-                        name=bootcamp_name,  # 매핑된 부트캠프 이름 사용
+                        name=bootcamp_name,
                         generation=generation
                     )
                     db.session.add(bootcamp)
@@ -162,13 +178,16 @@ def get_students():
     results = []
     for student, bootcamp in query.all():
         results.append({
+            'id': student.id,
             'bootcamp': bootcamp.name,
             'generation': bootcamp.generation,
             'name': student.name,
             'email': student.email,
             'gender': student.gender,
             'age': student.age,
-            'phone': student.phone
+            'phone': student.phone,
+            'status': student.status,
+            'memo': student.memo
         })
     return jsonify(results)
 
@@ -224,6 +243,30 @@ def delete_bootcamp():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+# 지원자 상태 업데이트 API
+@app.route('/student/update', methods=['POST'])
+def update_student():
+    data = request.get_json()
+    student_id = data.get('id')
+    status = data.get('status')
+    memo = data.get('memo')
+    
+    try:
+        student = Student.query.get(student_id)
+        if not student:
+            return jsonify({'error': '지원자를 찾을 수 없습니다.'}), 404
+            
+        if status:
+            student.status = status
+        if memo is not None:  # 빈 문자열도 허용
+            student.memo = memo
+            
+        db.session.commit()
+        return jsonify({'message': '성공적으로 업데이트되었습니다.'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 # 프론트엔드 테스트용 HTML
 @app.route('/')
 def index():
@@ -248,6 +291,32 @@ def index():
             .delete-btn:hover {
                 background-color: #ffebee;
             }
+            .status-select {
+                padding: 5px;
+                border-radius: 4px;
+            }
+            .memo-input {
+                width: 200px;
+                padding: 5px;
+                border-radius: 4px;
+            }
+            .save-btn {
+                padding: 5px 10px;
+                margin-left: 5px;
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+            .save-btn:hover {
+                background-color: #45a049;
+            }
+            .status-지원중 { color: #2196F3; }
+            .status-합격 { color: #4CAF50; }
+            .status-고민중 { color: #FF9800; }
+            .status-HRD최종등록 { color: #9C27B0; }
+            .status-지원취소 { color: #F44336; }
         </style>
     </head>
     <body>
@@ -264,7 +333,18 @@ def index():
         <button onclick="fetchStudents()">조회</button>
         <table border="1" id="studentsTable">
             <thead>
-                <tr><th>부트캠프</th><th>기수</th><th>이름</th><th>이메일</th><th>성별</th><th>나이</th><th>전화번호</th></tr>
+                <tr>
+                    <th>부트캠프</th>
+                    <th>기수</th>
+                    <th>이름</th>
+                    <th>이메일</th>
+                    <th>성별</th>
+                    <th>나이</th>
+                    <th>전화번호</th>
+                    <th>상태</th>
+                    <th>메모</th>
+                    <th>액션</th>
+                </tr>
             </thead>
             <tbody></tbody>
         </table>
@@ -272,6 +352,102 @@ def index():
         <button onclick="fetchStats()">통계 조회</button>
         <div id="stats"></div>
         <script>
+        const STATUS_OPTIONS = ['지원중', '합격', '고민중', 'HRD최종등록', '지원취소'];
+        
+        // 상태와 메모 업데이트 함수
+        async function updateStudent(studentId, status, memo) {
+            try {
+                const res = await fetch('/student/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        id: studentId,
+                        status: status,
+                        memo: memo
+                    })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.error);
+                }
+                return data;
+            } catch (error) {
+                console.error('Update error:', error);
+                alert('업데이트 중 에러가 발생했습니다.');
+                throw error;
+            }
+        }
+        
+        // 지원자 목록 조회 함수 수정
+        async function fetchStudents() {
+            try {
+                const bootcamp = document.getElementById('bootcamp').value;
+                const generation = document.getElementById('generation').value;
+                let url = `/students?bootcamp=${bootcamp}&generation=${generation}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                const tbody = document.querySelector('#studentsTable tbody');
+                tbody.innerHTML = '';
+                data.forEach(s => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${s.bootcamp}</td>
+                        <td>${s.generation}</td>
+                        <td>${s.name}</td>
+                        <td>${s.email}</td>
+                        <td>${s.gender}</td>
+                        <td>${s.age}</td>
+                        <td>${s.phone}</td>
+                        <td>
+                            <select class="status-select status-${s.status || '지원중'}" onchange="handleStatusChange(${s.id}, this)">
+                                ${STATUS_OPTIONS.map(option => 
+                                    `<option value="${option}" ${(s.status || '지원중') === option ? 'selected' : ''}>${option}</option>`
+                                ).join('')}
+                            </select>
+                        </td>
+                        <td>
+                            <input type="text" class="memo-input" value="${s.memo || ''}" 
+                                   onchange="handleMemoChange(${s.id}, this)" placeholder="메모 입력...">
+                        </td>
+                        <td>
+                            <button class="save-btn" onclick="handleSave(${s.id}, this)">저장</button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (error) {
+                console.error('Fetch students error:', error);
+                alert('지원자 목록을 불러오는 중 에러가 발생했습니다.');
+            }
+        }
+        
+        // 상태 변경 핸들러
+        async function handleStatusChange(studentId, selectElement) {
+            const row = selectElement.closest('tr');
+            selectElement.className = `status-select status-${selectElement.value}`;
+        }
+        
+        // 메모 변경 핸들러
+        async function handleMemoChange(studentId, inputElement) {
+            // 변경 사항은 저장 버튼 클릭 시 저장됨
+        }
+        
+        // 저장 버튼 핸들러
+        async function handleSave(studentId, buttonElement) {
+            const row = buttonElement.closest('tr');
+            const status = row.querySelector('.status-select').value;
+            const memo = row.querySelector('.memo-input').value;
+            
+            try {
+                await updateStudent(studentId, status, memo);
+                alert('성공적으로 저장되었습니다.');
+            } catch (error) {
+                console.error('Save error:', error);
+            }
+        }
+        
         // 부트캠프/기수 툴바 생성
         async function loadToolbar() {
             const res = await fetch('/bootcamps');
@@ -352,26 +528,6 @@ def index():
                 document.getElementById('uploadMessage').innerText = '서버 연결 중 에러가 발생했습니다.';
                 document.getElementById('uploadMessage').style.color = 'red';
                 console.error('Upload error:', error);
-            }
-        }
-        async function fetchStudents() {
-            try {
-                const bootcamp = document.getElementById('bootcamp').value;
-                const generation = document.getElementById('generation').value;
-                let url = `/students?bootcamp=${bootcamp}&generation=${generation}`;
-                const res = await fetch(url);
-                const data = await res.json();
-                const tbody = document.querySelector('#studentsTable tbody');
-                tbody.innerHTML = '';
-                data.forEach(s => {
-                    tbody.innerHTML += `<tr>
-                        <td>${s.bootcamp}</td><td>${s.generation}</td><td>${s.name}</td><td>${s.email}</td><td>${s.gender}</td>
-                        <td>${s.age}</td><td>${s.phone}</td>
-                    </tr>`;
-                });
-            } catch (error) {
-                console.error('Fetch students error:', error);
-                alert('지원자 목록을 불러오는 중 에러가 발생했습니다.');
             }
         }
         async function fetchStats() {
