@@ -138,7 +138,7 @@ def upload_csv():
                 return jsonify({'error': f'데이터 처리 중 에러가 발생했습니다: {str(e)}'}), 500
         
         try:
-        db.session.commit()
+            db.session.commit()
             return jsonify({'message': '업로드 및 저장 완료'})
         except Exception as e:
             print("DB 저장 에러:", str(e))
@@ -393,7 +393,12 @@ def index():
 
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()  # 테이블이 없을 때만 생성
+        try:
+            # 테이블이 없을 때만 생성하도록 수정
+            if not db.engine.dialect.has_table(db.engine, 'bootcamps'):
+                db.create_all()
+        except Exception as e:
+            print("데이터베이스 초기화 에러:", str(e))
     
     port = int(os.getenv('PORT', 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
