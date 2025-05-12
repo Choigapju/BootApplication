@@ -549,12 +549,8 @@ def index():
 
 if __name__ == '__main__':
     with app.app_context():
-        try:
-            # 테이블이 없을 때만 생성하도록 수정
-            if not db.engine.dialect.has_table(db.engine, 'bootcamps'):
-                db.create_all()
-        except Exception as e:
-            print("데이터베이스 초기화 에러:", str(e))
+        db.drop_all()  # 주의: 기존 데이터 삭제됨
+        db.create_all()
     
     port = int(os.getenv('PORT', 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
