@@ -42,16 +42,33 @@ def upload_csv():
         if not file:
             return jsonify({'error': '파일이 없습니다.'}), 400
             
-        # 파일명에서 기수 정보 추출 (kdt-design-5th_지원서_2024-05-11.csv -> 5th)
+        # 파일명에서 부트캠프 종류와 기수 정보 추출
         filename = file.filename
         print("업로드된 파일명:", filename)  # 디버깅용
         
         try:
-            generation = filename.split('_')[0].split('-')[-1]  # kdt-design-5th -> 5th
-            print("추출된 기수:", generation)  # 디버깅용
+            # kdt-{부트캠프종류}-{기수}th 형식에서 추출
+            parts = filename.split('_')[0].split('-')  # ['kdt', 'design', '5th'] 또는 ['kdt', 'growth', '2nd'] 등
+            if len(parts) >= 3:
+                bootcamp_type = parts[1]  # design, growth, frontend 등
+                generation = parts[2]  # 5th, 2nd, 14th 등
+                
+                # 부트캠프 종류 매핑
+                bootcamp_mapping = {
+                    'design': 'UXUI 디자인 부트캠프',
+                    'growth': '그로스마케팅 부트캠프',
+                    'frontend': '프론트엔드 부트캠프'
+                }
+                
+                bootcamp_name = bootcamp_mapping.get(bootcamp_type, f'{bootcamp_type} 부트캠프')
+                print("추출된 부트캠프:", bootcamp_name)  # 디버깅용
+                print("추출된 기수:", generation)  # 디버깅용
+            else:
+                return jsonify({'error': '파일명 형식이 올바르지 않습니다.'}), 400
+                
         except Exception as e:
-            print("기수 추출 에러:", str(e))
-            return jsonify({'error': '파일명에서 기수를 추출할 수 없습니다.'}), 400
+            print("부트캠프/기수 추출 에러:", str(e))
+            return jsonify({'error': '파일명에서 부트캠프/기수를 추출할 수 없습니다.'}), 400
         
         try:
             df = pd.read_csv(file)
@@ -80,13 +97,13 @@ def upload_csv():
             try:
                 # 부트캠프/기수 정보 추출
                 bootcamp = Bootcamp.query.filter_by(
-                    name='UXUI 디자인 부트캠프',  # 고정값
-                    generation=generation  # 파일명에서 추출한 기수 사용
+                    name=bootcamp_name,  # 매핑된 부트캠프 이름 사용
+                    generation=generation
                 ).first()
                 
                 if not bootcamp:
                     bootcamp = Bootcamp(
-                        name='UXUI 디자인 부트캠프',
+                        name=bootcamp_name,  # 매핑된 부트캠프 이름 사용
                         generation=generation
                     )
                     db.session.add(bootcamp)
@@ -171,6 +188,32 @@ def get_bootcamps():
         result.append({'name': b.name, 'generation': b.generation})
     return jsonify(result)
 
+# 부트캠프/기수 삭제 API
+@app.route('/bootcamp/delete', methods=['POST'])
+def delete_bootcamp():
+    data = request.get_json()
+    bootcamp_name = data.get('name')
+    generation = data.get('generation')
+    
+    try:
+        # 해당 부트캠프/기수의 모든 지원자 삭제
+        Student.query.join(Bootcamp).filter(
+            Bootcamp.name == bootcamp_name,
+            Bootcamp.generation == generation
+        ).delete(synchronize_session=False)
+        
+        # 해당 부트캠프/기수 삭제
+        Bootcamp.query.filter_by(
+            name=bootcamp_name,
+            generation=generation
+        ).delete()
+        
+        db.session.commit()
+        return jsonify({'message': '성공적으로 삭제되었습니다.'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 # 프론트엔드 테스트용 HTML
 @app.route('/')
 def index():
@@ -179,6 +222,23 @@ def index():
     <html>
     <head>
         <title>Bootcamp 지원자 관리</title>
+        <style>
+            .bootcamp-item {
+                display: inline-block;
+                margin: 5px;
+                padding: 5px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+            }
+            .delete-btn {
+                margin-left: 5px;
+                color: red;
+                cursor: pointer;
+            }
+            .delete-btn:hover {
+                background-color: #ffebee;
+            }
+        </style>
     </head>
     <body>
         <h2>CSV 업로드</h2>
@@ -215,6 +275,9 @@ def index():
                     return {name, generation};
                 });
             unique.forEach(b => {
+                const container = document.createElement('div');
+                container.className = 'bootcamp-item';
+                
                 const btn = document.createElement('button');
                 btn.innerText = `${b.name} / ${b.generation}`;
                 btn.onclick = function() {
@@ -222,7 +285,42 @@ def index():
                     document.getElementById('generation').value = b.generation;
                     fetchStudents();
                 };
-                toolbar.appendChild(btn);
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.innerText = '삭제';
+                deleteBtn.className = 'delete-btn';
+                deleteBtn.onclick = async function() {
+                    if (confirm(`정말로 ${b.name} ${b.generation}기 데이터를 삭제하시겠습니까?`)) {
+                        try {
+                            const res = await fetch('/bootcamp/delete', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                },
+                                body: JSON.stringify({
+                                    name: b.name,
+                                    generation: b.generation
+                                })
+                            });
+                            const data = await res.json();
+                            if (res.ok) {
+                                alert(data.message);
+                                loadToolbar(); // 툴바 새로고침
+                                fetchStudents(); // 학생 목록 새로고침
+                                fetchStats(); // 통계 새로고침
+                            } else {
+                                alert(data.error || '삭제 중 에러가 발생했습니다.');
+                            }
+                        } catch (error) {
+                            console.error('Delete error:', error);
+                            alert('삭제 중 에러가 발생했습니다.');
+                        }
+                    }
+                };
+                
+                container.appendChild(btn);
+                container.appendChild(deleteBtn);
+                toolbar.appendChild(container);
             });
         }
         document.addEventListener('DOMContentLoaded', loadToolbar);
