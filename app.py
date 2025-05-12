@@ -106,10 +106,12 @@ def upload_csv():
         
         for _, row in df.iterrows():
             try:
+                # 전화번호를 문자열로 변환
+                phone_str = str(row.get('가입 연락처', '')).strip()
                 # 이메일과 전화번호로 중복 체크
                 existing_student = Student.query.join(Bootcamp).filter(
                     Student.email == row['가입 이메일'],
-                    Student.phone == row.get('가입 연락처', ''),
+                    Student.phone == phone_str,
                     Bootcamp.name == bootcamp_name,
                     Bootcamp.generation == generation
                 ).first()
@@ -145,7 +147,7 @@ def upload_csv():
                     email=row['가입 이메일'],
                     gender=row.get('성별', ''),
                     age=age,
-                    phone=row.get('가입 연락처', ''),
+                    phone=phone_str,  # 여기도 문자열로 저장
                     bootcamp_id=bootcamp.id
                 )
                 db.session.add(student)
@@ -549,8 +551,6 @@ def index():
 
 if __name__ == '__main__':
     with app.app_context():
-        db.drop_all()  # 주의: 기존 데이터 삭제됨
-        db.create_all()
-    
+        db.create_all()  # 테이블이 없을 때만 생성(데이터는 보존)
     port = int(os.getenv('PORT', 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
