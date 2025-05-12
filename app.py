@@ -191,7 +191,6 @@ def get_students():
             'status': student.status,
             'memo': student.memo
         })
-    await fetchStatusStats();
     return jsonify(results)
 
 # 전체 지원자 통계
@@ -430,7 +429,6 @@ def index():
                     `;
                     tbody.appendChild(tr);
                 });
-                await fetchStatusStats();
             } catch (error) {
                 console.error('Fetch students error:', error);
                 alert('지원자 목록을 불러오는 중 에러가 발생했습니다.');
@@ -457,7 +455,6 @@ def index():
             try {
                 await updateStudent(studentId, status, memo);
                 alert('성공적으로 저장되었습니다.');
-                await fetchStatusStats();
             } catch (error) {
                 console.error('Save error:', error);
             }
@@ -508,7 +505,6 @@ def index():
                                 alert(data.message);
                                 loadToolbar(); // 툴바 새로고침
                                 fetchStudents(); // 학생 목록 새로고침
-                                fetchStatusStats(); // 통계 새로고침
                             } else {
                                 alert(data.error || '삭제 중 에러가 발생했습니다.');
                             }
