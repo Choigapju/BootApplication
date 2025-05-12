@@ -138,13 +138,13 @@ def upload_csv():
                 return jsonify({'error': f'데이터 처리 중 에러가 발생했습니다: {str(e)}'}), 500
         
         try:
-            db.session.commit()
+        db.session.commit()
             return jsonify({'message': '업로드 및 저장 완료'})
         except Exception as e:
             print("DB 저장 에러:", str(e))
             db.session.rollback()
             return jsonify({'error': '데이터베이스 저장 중 에러가 발생했습니다.'}), 500
-        
+    
     except Exception as e:
         print("전체 에러:", str(e))
         return jsonify({'error': f'처리 중 에러가 발생했습니다: {str(e)}'}), 500
@@ -203,17 +203,20 @@ def delete_bootcamp():
     generation = data.get('generation')
     
     try:
-        # 해당 부트캠프/기수의 모든 지원자 삭제
-        Student.query.join(Bootcamp).filter(
-            Bootcamp.name == bootcamp_name,
-            Bootcamp.generation == generation
-        ).delete(synchronize_session=False)
-        
-        # 해당 부트캠프/기수 삭제
-        Bootcamp.query.filter_by(
+        # 먼저 해당 부트캠프/기수의 ID를 찾습니다
+        bootcamp = Bootcamp.query.filter_by(
             name=bootcamp_name,
             generation=generation
-        ).delete()
+        ).first()
+        
+        if not bootcamp:
+            return jsonify({'error': '해당 부트캠프/기수를 찾을 수 없습니다.'}), 404
+        
+        # 해당 부트캠프 ID를 가진 모든 지원자 삭제
+        Student.query.filter_by(bootcamp_id=bootcamp.id).delete()
+        
+        # 부트캠프/기수 삭제
+        db.session.delete(bootcamp)
         
         db.session.commit()
         return jsonify({'message': '성공적으로 삭제되었습니다.'}), 200
