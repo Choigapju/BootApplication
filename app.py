@@ -57,7 +57,14 @@ def upload_csv():
                 bootcamp_mapping = {
                     'design': 'UXUI 디자인 부트캠프',
                     'growth': '그로스마케팅 부트캠프',
-                    'frontend': '프론트엔드 부트캠프'
+                    'frontend': '프론트엔드 부트캠프',
+                    'backend': '백엔드 부트캠프',
+                    'aiw' : 'AI 웹 부트캠프',
+                    'android' : '안드로이드 부트캠프',
+                    'ios' : '아이폰 앱 개발 부트캠프',
+                    'game' : '유니티 부트캠프',
+                    'data' : '데이터 분석 부트캠프',
+                    'cloud' : '클라우드 부트캠프',
                 }
                 
                 bootcamp_name = bootcamp_mapping.get(bootcamp_type, f'{bootcamp_type} 부트캠프')
