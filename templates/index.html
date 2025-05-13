@@ -260,6 +260,34 @@
         });
     }
     // fetchStatusStats 함수에서 drawPieChart(data) 호출하도록 수정
+    document.addEventListener('DOMContentLoaded', function() {
+        fetchStudents();
+    });
+    async function fetchStudents() {
+        const bootcamp = document.getElementById('bootcamp').value;
+        const generation = document.getElementById('generation').value;
+        let url = `/students?bootcamp=${bootcamp}&generation=${generation}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        const tbody = document.querySelector('#studentsTable tbody');
+        tbody.innerHTML = '';
+        data.forEach(s => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${s.bootcamp}</td>
+                <td>${s.generation}</td>
+                <td>${s.name}</td>
+                <td>${s.email}</td>
+                <td>${s.gender}</td>
+                <td>${s.age}</td>
+                <td>${s.phone}</td>
+                <td>${s.status}</td>
+                <td>${s.memo || ''}</td>
+                <td>...</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
     </script>
 </body>
 </html>
