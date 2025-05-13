@@ -161,6 +161,11 @@
         .statistics-table tr:hover {
             background: #FFF3E5;
         }
+        .no-data {
+            text-align: center;
+            color: #aaa;
+            padding: 24px 0;
+        }
         @media (max-width: 700px) {
             .section { padding: 18px 4vw; }
             .header-title { font-size: 1.3rem; }
@@ -229,11 +234,26 @@
     </div>
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- 기존 JS 코드(생략) 붙여넣기 -->
     <script>
-    // ... 기존 JS 코드 붙여넣기 (fetchStudents, loadToolbar 등)
-    // 차트 색상도 아래처럼 변경
-    function drawPieChart(data) {
+    // 통계(상태별 인원수+파이차트)
+    async function fetchStatusStats() {
+        const bootcamp = document.getElementById('bootcamp').value;
+        const generation = document.getElementById('generation').value;
+        const res = await fetch(`/stats_by_status?bootcamp=${bootcamp}&generation=${generation}`);
+        const data = await res.json();
+
+        // 표
+        const tbody = document.querySelector('#statusTable tbody');
+        tbody.innerHTML = '';
+        if (Object.keys(data).length === 0) {
+            tbody.innerHTML = `<tr><td colspan="2" class="no-data">데이터가 없습니다</td></tr>`;
+        } else {
+            Object.entries(data).forEach(([status, count]) => {
+                tbody.innerHTML += `<tr><td>${status}</td><td>${count}</td></tr>`;
+            });
+        }
+
+        // 파이차트
         const ctx = document.getElementById('statusPie').getContext('2d');
         if(window.statusPieChart) window.statusPieChart.destroy();
         window.statusPieChart = new Chart(ctx, {
@@ -259,10 +279,8 @@
             }
         });
     }
-    // fetchStatusStats 함수에서 drawPieChart(data) 호출하도록 수정
-    document.addEventListener('DOMContentLoaded', function() {
-        fetchStudents();
-    });
+
+    // 지원자 목록 조회
     async function fetchStudents() {
         const bootcamp = document.getElementById('bootcamp').value;
         const generation = document.getElementById('generation').value;
@@ -271,23 +289,115 @@
         const data = await res.json();
         const tbody = document.querySelector('#studentsTable tbody');
         tbody.innerHTML = '';
-        data.forEach(s => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${s.bootcamp}</td>
-                <td>${s.generation}</td>
-                <td>${s.name}</td>
-                <td>${s.email}</td>
-                <td>${s.gender}</td>
-                <td>${s.age}</td>
-                <td>${s.phone}</td>
-                <td>${s.status}</td>
-                <td>${s.memo || ''}</td>
-                <td>...</td>
-            `;
-            tbody.appendChild(tr);
+        if (data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="10" class="no-data">지원자 데이터가 없습니다</td></tr>`;
+        } else {
+            data.forEach(s => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${s.bootcamp}</td>
+                    <td>${s.generation}</td>
+                    <td>${s.name}</td>
+                    <td>${s.email}</td>
+                    <td>${s.gender}</td>
+                    <td>${s.age}</td>
+                    <td>${s.phone}</td>
+                    <td>${s.status}</td>
+                    <td>${s.memo || ''}</td>
+                    <td>...</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    }
+
+    // 부트캠프/기수별 버튼
+    async function loadToolbar() {
+        const res = await fetch('/bootcamps');
+        const data = await res.json();
+        const toolbar = document.getElementById('toolbar');
+        toolbar.innerHTML = '';
+        // 중복 제거 및 버튼 생성
+        const unique = Array.from(new Set(data.map(b => b.name + '||' + b.generation)))
+            .map(str => {
+                const [name, generation] = str.split('||');
+                return {name, generation};
+            });
+        unique.forEach(b => {
+            const container = document.createElement('div');
+            container.className = 'bootcamp-item';
+            const btn = document.createElement('button');
+            btn.innerText = `${b.name} / ${b.generation}`;
+            btn.onclick = function() {
+                document.getElementById('bootcamp').value = b.name;
+                document.getElementById('generation').value = b.generation;
+                fetchStudents();
+                fetchStatusStats();
+            };
+            const deleteBtn = document.createElement('button');
+            deleteBtn.innerText = '삭제';
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.onclick = async function() {
+                if (confirm(`정말로 ${b.name} ${b.generation}기 데이터를 삭제하시겠습니까?`)) {
+                    try {
+                        const res = await fetch('/bootcamp/delete', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({name: b.name, generation: b.generation})
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                            alert(data.message);
+                            loadToolbar();
+                            fetchStudents();
+                            fetchStatusStats();
+                        } else {
+                            alert(data.error || '삭제 중 에러가 발생했습니다.');
+                        }
+                    } catch (error) {
+                        alert('삭제 중 에러가 발생했습니다.');
+                    }
+                }
+            };
+            container.appendChild(btn);
+            container.appendChild(deleteBtn);
+            toolbar.appendChild(container);
         });
     }
+
+    // CSV 업로드 폼 처리
+    document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        try {
+            const res = await fetch('/upload', {method: 'POST', body: formData});
+            const data = await res.json();
+            if (res.ok) {
+                document.getElementById('uploadMessage').innerText = data.message;
+                document.getElementById('uploadMessage').style.color = 'green';
+                loadToolbar();
+                fetchStudents();
+                fetchStatusStats();
+            } else {
+                document.getElementById('uploadMessage').innerText = data.error || '업로드 중 에러가 발생했습니다.';
+                document.getElementById('uploadMessage').style.color = 'red';
+            }
+        } catch (error) {
+            document.getElementById('uploadMessage').innerText = '서버 연결 중 에러가 발생했습니다.';
+            document.getElementById('uploadMessage').style.color = 'red';
+        }
+    });
+
+    // 부트캠프/기수 입력값 변경 시 통계 자동 갱신
+    document.getElementById('bootcamp').addEventListener('change', fetchStatusStats);
+    document.getElementById('generation').addEventListener('change', fetchStatusStats);
+
+    // 페이지 로딩 시 초기화
+    document.addEventListener('DOMContentLoaded', function() {
+        loadToolbar();
+        fetchStatusStats();
+        fetchStudents();
+    });
     </script>
 </body>
 </html>
