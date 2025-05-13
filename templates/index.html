@@ -6,15 +6,131 @@
     <title>부트캠프 지원 현황</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        .upload-container {
-            max-width: 800px;
-            margin: 2rem auto;
-            padding: 2rem;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            border-radius: 8px;
+        body {
+            font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
+            background: #FFFAF5;
+            color: #3F3F3F;
+            margin: 0;
+            padding: 0;
         }
-        .statistics-table {
-            margin-top: 2rem;
+        h2 {
+            font-weight: 800;
+            margin-top: 40px;
+            color: #3F3F3F;
+        }
+        section {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(63,63,63,0.06);
+            margin: 32px auto;
+            padding: 32px;
+            max-width: 1100px;
+        }
+        #stats, #statusTable, #statusPie {
+            margin-bottom: 24px;
+        }
+        #statusTable th, #statusTable td {
+            padding: 8px 16px;
+            font-size: 1rem;
+        }
+        #statusTable th {
+            background: #FFFAF5;
+            color: #3F3F3F;
+            font-weight: 700;
+        }
+        #statusTable tr:hover {
+            background: #FFF3E5;
+        }
+        #studentsTable th, #studentsTable td {
+            padding: 8px 12px;
+            font-size: 0.98rem;
+        }
+        #studentsTable th {
+            background: #FFFAF5;
+            color: #3F3F3F;
+            font-weight: 700;
+        }
+        #studentsTable tr:hover {
+            background: #FFF3E5;
+        }
+        input[type="text"], input[type="file"], select {
+            border: 1.5px solid #FF7710;
+            border-radius: 8px;
+            padding: 8px 12px;
+            background: #FFFAF5;
+            color: #3F3F3F;
+            margin-right: 8px;
+            font-size: 1rem;
+        }
+        button, .save-btn {
+            background: #FF7710;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+            box-shadow: 0 2px 8px rgba(255,119,16,0.08);
+        }
+        button:hover, .save-btn:hover {
+            background: #e65c00;
+        }
+        .delete-btn {
+            background: #fff;
+            color: #FF7710;
+            border: 1.5px solid #FF7710;
+            font-weight: 700;
+            border-radius: 8px;
+            padding: 6px 14px;
+            margin-left: 8px;
+            transition: background 0.2s, color 0.2s;
+        }
+        .delete-btn:hover {
+            background: #FF7710;
+            color: #fff;
+        }
+        .bootcamp-item {
+            display: inline-block;
+            margin: 5px 10px 5px 0;
+            padding: 8px 16px;
+            background: #FFFAF5;
+            border-radius: 8px;
+            box-shadow: 0 1px 4px rgba(63,63,63,0.04);
+            font-weight: 600;
+        }
+        .status-select {
+            border: 1.5px solid #FF7710;
+            border-radius: 8px;
+            padding: 6px 10px;
+            background: #FFFAF5;
+            color: #3F3F3F;
+        }
+        .memo-input {
+            width: 180px;
+            border: 1.5px solid #FF7710;
+            border-radius: 8px;
+            padding: 6px 10px;
+            background: #FFFAF5;
+            color: #3F3F3F;
+        }
+        #uploadMessage {
+            margin-top: 10px;
+            font-weight: 600;
+        }
+        canvas#statusPie {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(63,63,63,0.06);
+            margin-top: 10px;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+            background: #FFFAF5;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #FF7710;
+            border-radius: 8px;
         }
     </style>
 </head>
