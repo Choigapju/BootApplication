@@ -520,7 +520,10 @@ def index():
                 toolbar.appendChild(container);
             });
         }
-        document.addEventListener('DOMContentLoaded', loadToolbar);
+        document.addEventListener('DOMContentLoaded', () => {
+            loadToolbar();
+            fetchStatusStats(); // 통계 차트도 바로 표시
+        });
         document.getElementById('uploadForm').onsubmit = async function(e) {
             e.preventDefault();
             const formData = new FormData(this);
@@ -544,7 +547,11 @@ def index():
         async function fetchStatusStats() {
             const bootcamp = document.getElementById('bootcamp').value;
             const generation = document.getElementById('generation').value;
-            const res = await fetch(`/stats_by_status?bootcamp=${bootcamp}&generation=${generation}`);
+            let url = `/stats_by_status`;
+            if (bootcamp || generation) {
+                url += `?bootcamp=${bootcamp}&generation=${generation}`;
+            }
+            const res = await fetch(url);
             const data = await res.json();
 
             // 표
