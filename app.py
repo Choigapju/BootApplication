@@ -4,6 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import pandas as pd
 from dotenv import load_dotenv
+import math
 
 load_dotenv()  # .env 파일 로드
 
@@ -37,6 +38,14 @@ class Student(db.Model):
     bootcamp_id = db.Column(db.Integer, db.ForeignKey('bootcamps.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=db.func.now())  # 생성 시간
     updated_at = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())  # 수정 시간
+
+def safe_str(val):
+    # NaN, None, float('nan') 모두 ''로 변환
+    if val is None:
+        return ''
+    if isinstance(val, float) and math.isnan(val):
+        return ''
+    return str(val).strip()
 
 # CSV 업로드 및 DB 저장
 @app.route('/upload', methods=['POST'])
@@ -84,6 +93,7 @@ def upload_csv():
         try:
             df = pd.read_csv(file)
             print("CSV 컬럼명:", df.columns.tolist())  # 디버깅용
+            df = df.fillna('')
         except Exception as e:
             print("CSV 읽기 에러:", str(e))
             return jsonify({'error': 'CSV 파일을 읽을 수 없습니다.'}), 400
@@ -106,11 +116,11 @@ def upload_csv():
         
         for _, row in df.iterrows():
             try:
-                # 전화번호를 문자열로 변환
+                email = str(row.get('가입 이메일', '')).strip()
                 phone_str = str(row.get('가입 연락처', '')).strip()
                 # 이메일과 전화번호로 중복 체크
                 existing_student = Student.query.join(Bootcamp).filter(
-                    Student.email == row['가입 이메일'],
+                    Student.email == email,
                     Student.phone == phone_str,
                     Bootcamp.name == bootcamp_name,
                     Bootcamp.generation == generation
@@ -144,7 +154,7 @@ def upload_csv():
                 
                 student = Student(
                     name=row['가입 이름'],
-                    email=row['가입 이메일'],
+                    email=email,
                     gender=row.get('성별', ''),
                     age=age,
                     phone=phone_str,  # 여기도 문자열로 저장
