@@ -221,6 +221,11 @@
     </div>
     <div class="section">
         <h2>지원자 조회</h2>
+        <form class="upload-form" id="uploadForm2" enctype="multipart/form-data" style="margin-bottom:16px;">
+            <input type="file" name="file" required />
+            <button type="submit">CSV 업로드</button>
+            <span id="uploadMessage2" style="margin-left:10px;"></span>
+        </form>
         <div id="toolbar"></div>
         <form class="search-form" onsubmit="fetchStudents(); return false;">
             <label>부트캠프: <input type="text" id="bootcamp"></label>
@@ -438,6 +443,82 @@
             document.getElementById('uploadMessage').style.color = 'red';
         }
     });
+
+    document.getElementById('uploadForm2').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        try {
+            const res = await fetch('/upload', {method: 'POST', body: formData});
+            const data = await res.json();
+            if (res.ok) {
+                document.getElementById('uploadMessage2').innerText = data.message;
+                document.getElementById('uploadMessage2').style.color = 'green';
+                loadToolbar();
+                fetchStudents();
+                fetchStatusStats();
+            } else {
+                document.getElementById('uploadMessage2').innerText = data.error || '업로드 중 에러가 발생했습니다.';
+                document.getElementById('uploadMessage2').style.color = 'red';
+            }
+        } catch (error) {
+            document.getElementById('uploadMessage2').innerText = '서버 연결 중 에러가 발생했습니다.';
+            document.getElementById('uploadMessage2').style.color = 'red';
+        }
+    });
+
+    // 부트캠프/기수별 버튼
+    async function loadToolbar() {
+        const res = await fetch('/bootcamps');
+        const data = await res.json();
+        const toolbar = document.getElementById('toolbar');
+        toolbar.innerHTML = '';
+        // 중복 제거 및 버튼 생성
+        const unique = Array.from(new Set(data.map(b => b.name + '||' + b.generation)))
+            .map(str => {
+                const [name, generation] = str.split('||');
+                return {name, generation};
+            });
+        unique.forEach(b => {
+            const container = document.createElement('div');
+            container.className = 'bootcamp-item';
+            const btn = document.createElement('button');
+            btn.innerText = `${b.name} / ${b.generation}`;
+            btn.onclick = function() {
+                document.getElementById('bootcamp').value = b.name;
+                document.getElementById('generation').value = b.generation;
+                fetchStudents();
+                fetchStatusStats();
+            };
+            const deleteBtn = document.createElement('button');
+            deleteBtn.innerText = '삭제';
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.onclick = async function() {
+                if (confirm(`정말로 ${b.name} ${b.generation}기 데이터를 삭제하시겠습니까?`)) {
+                    try {
+                        const res = await fetch('/bootcamp/delete', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({name: b.name, generation: b.generation})
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                            alert(data.message);
+                            loadToolbar();
+                            fetchStudents();
+                            fetchStatusStats();
+                        } else {
+                            alert(data.error || '삭제 중 에러가 발생했습니다.');
+                        }
+                    } catch (error) {
+                        alert('삭제 중 에러가 발생했습니다.');
+                    }
+                }
+            };
+            container.appendChild(btn);
+            container.appendChild(deleteBtn);
+            toolbar.appendChild(container);
+        });
+    }
 
     // 부트캠프/기수 입력값 변경 시 통계 자동 갱신
     document.getElementById('bootcamp').addEventListener('change', fetchStatusStats);
