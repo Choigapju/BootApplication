@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, render_template_string
+from flask import Flask, request, jsonify, render_template_string, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import pandas as pd
@@ -272,7 +272,7 @@ def update_student():
 # 프론트엔드 테스트용 HTML
 @app.route('/')
 def index():
-    return render_template_string(html)
+    return render_template('index.html')
 
 @app.route('/stats_by_status', methods=['GET'])
 def stats_by_status():
