@@ -54,19 +54,15 @@ def upload_csv():
         file = request.files['file']
         if not file:
             return jsonify({'error': '파일이 없습니다.'}), 400
-            
+
         # 파일명에서 부트캠프 종류와 기수 정보 추출
         filename = file.filename
         print("업로드된 파일명:", filename)  # 디버깅용
-        
         try:
-            # kdt-{부트캠프종류}-{기수}th 형식에서 추출
-            parts = filename.split('_')[0].split('-')  # ['kdt', 'design', '5th'] 또는 ['kdt', 'growth', '2nd'] 등
+            parts = filename.split('_')[0].split('-')
             if len(parts) >= 3:
-                bootcamp_type = parts[1]  # design, growth, frontend 등
-                generation = parts[2]  # 5th, 2nd, 14th 등
-                
-                # 부트캠프 종류 매핑
+                bootcamp_type = parts[1]
+                generation = parts[2]
                 bootcamp_mapping = {
                     'design': 'UXUI 디자인 부트캠프',
                     'growth': '그로스마케팅 부트캠프',
@@ -79,101 +75,81 @@ def upload_csv():
                     'data' : '데이터 분석 부트캠프',
                     'cloud' : '클라우드 부트캠프',
                 }
-                
                 bootcamp_name = bootcamp_mapping.get(bootcamp_type, f'{bootcamp_type} 부트캠프')
-                print("추출된 부트캠프:", bootcamp_name)  # 디버깅용
-                print("추출된 기수:", generation)  # 디버깅용
+                print("추출된 부트캠프:", bootcamp_name)
+                print("추출된 기수:", generation)
             else:
                 return jsonify({'error': '파일명 형식이 올바르지 않습니다.'}), 400
-                
         except Exception as e:
             print("부트캠프/기수 추출 에러:", str(e))
             return jsonify({'error': '파일명에서 부트캠프/기수를 추출할 수 없습니다.'}), 400
-        
+
         try:
             df = pd.read_csv(file)
-            print("CSV 컬럼명:", df.columns.tolist())  # 디버깅용
+            print("CSV 컬럼명:", df.columns.tolist())
             df = df.fillna('')
         except Exception as e:
             print("CSV 읽기 에러:", str(e))
             return jsonify({'error': 'CSV 파일을 읽을 수 없습니다.'}), 400
-        
-        # 컬럼명 매핑 (실제 CSV 파일의 컬럼명에 맞게 수정)
+
         column_mapping = {
             'name': '가입 이름',
             'email': '가입 이메일',
             'gender': '성별',
-            'age': '생년월일',  # 생년월일에서 나이 계산
+            'age': '생년월일',
             'phone': '가입 연락처'
         }
-        
-        # 컬럼명 변경
         try:
             df = df.rename(columns=column_mapping)
         except Exception as e:
             print("컬럼명 변경 에러:", str(e))
             return jsonify({'error': 'CSV 파일의 컬럼명을 변경할 수 없습니다.'}), 400
-        
-        for _, row in df.iterrows():
-            try:
-                email = str(row.get('가입 이메일', '')).strip()
-                phone_str = str(row.get('가입 연락처', '')).strip()
-                # 이메일과 전화번호로 중복 체크
-                existing_student = Student.query.join(Bootcamp).filter(
-                    Student.email == email,
-                    Student.phone == phone_str,
-                    Bootcamp.name == bootcamp_name,
-                    Bootcamp.generation == generation
-                ).first()
-                
-                if existing_student:
-                    print(f"중복 지원자 발견: {row['가입 이름']} ({row['가입 이메일']})")
-                    continue  # 중복 지원자는 건너뜀
-                
-                # 부트캠프/기수 정보 추출
-                bootcamp = Bootcamp.query.filter_by(
-                    name=bootcamp_name,
-                    generation=generation
-                ).first()
-                
-                if not bootcamp:
-                    bootcamp = Bootcamp(
-                        name=bootcamp_name,
-                        generation=generation
-                    )
-                    db.session.add(bootcamp)
-                    db.session.commit()
-                
-                # 생년월일에서 나이 계산
-                try:
-                    birth_year = int(row['생년월일'].split('-')[0])
-                    current_year = 2024  # 현재 연도
-                    age = current_year - birth_year
-                except:
-                    age = None
-                
-                student = Student(
-                    name=row['가입 이름'],
-                    email=email,
-                    gender=row.get('성별', ''),
-                    age=age,
-                    phone=phone_str,  # 여기도 문자열로 저장
-                    bootcamp_id=bootcamp.id
-                )
-                db.session.add(student)
-            except Exception as e:
-                print("데이터 처리 에러:", str(e))
-                return jsonify({'error': f'데이터 처리 중 에러가 발생했습니다: {str(e)}'}), 500
-        
-        try:
+
+        # 부트캠프 객체 미리 조회/생성
+        bootcamp = Bootcamp.query.filter_by(
+            name=bootcamp_name,
+            generation=generation
+        ).first()
+        if not bootcamp:
+            bootcamp = Bootcamp(name=bootcamp_name, generation=generation)
+            db.session.add(bootcamp)
             db.session.commit()
-            return jsonify({'message': '업로드 및 저장 완료'})
-        except Exception as e:
-            print("DB 저장 에러:", str(e))
-            db.session.rollback()
-            return jsonify({'error': '데이터베이스 저장 중 에러가 발생했습니다.'}), 500
-    
+
+        # 이미 등록된 지원자 (email, phone) 쌍 미리 조회
+        existing = set(
+            (s.email, s.phone)
+            for s in Student.query.filter_by(bootcamp_id=bootcamp.id).all()
+        )
+
+        new_students = []
+        for _, row in df.iterrows():
+            email = str(row.get('가입 이메일', '')).strip()
+            phone_str = str(row.get('가입 연락처', '')).strip()
+            if (email, phone_str) in existing:
+                continue
+            try:
+                birth_year = int(row['생년월일'].split('-')[0])
+                current_year = 2024
+                age = current_year - birth_year
+            except:
+                age = None
+            student = Student(
+                name=row['가입 이름'],
+                email=email,
+                gender=row.get('성별', ''),
+                age=age,
+                phone=phone_str,
+                bootcamp_id=bootcamp.id
+            )
+            new_students.append(student)
+            existing.add((email, phone_str))  # 중복 방지
+
+        if new_students:
+            db.session.bulk_save_objects(new_students)
+        db.session.commit()
+        return jsonify({'message': '업로드 및 저장 완료'})
     except Exception as e:
+        db.session.rollback()
         print("전체 에러:", str(e))
         return jsonify({'error': f'처리 중 에러가 발생했습니다: {str(e)}'}), 500
 

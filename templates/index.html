@@ -292,6 +292,7 @@
         if (data.length === 0) {
             tbody.innerHTML = `<tr><td colspan="10" class="no-data">지원자 데이터가 없습니다</td></tr>`;
         } else {
+            const STATUS_OPTIONS = ['지원중', '합격', '고민중', 'HRD최종등록', '지원취소'];
             data.forEach(s => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
@@ -302,11 +303,46 @@
                     <td>${s.gender}</td>
                     <td>${s.age}</td>
                     <td>${s.phone}</td>
-                    <td>${s.status}</td>
-                    <td>${s.memo || ''}</td>
-                    <td>...</td>
+                    <td>
+                        <select class="status-select" data-id="${s.id}">
+                            ${STATUS_OPTIONS.map(option =>
+                                `<option value="${option}" ${s.status === option ? 'selected' : ''}>${option}</option>`
+                            ).join('')}
+                        </select>
+                    </td>
+                    <td>
+                        <input type="text" class="memo-input" data-id="${s.id}" value="${s.memo || ''}" placeholder="메모 입력...">
+                    </td>
+                    <td>
+                        <button class="save-btn" data-id="${s.id}">저장</button>
+                    </td>
                 `;
                 tbody.appendChild(tr);
+            });
+
+            // 저장 버튼 이벤트 등록
+            document.querySelectorAll('.save-btn').forEach(btn => {
+                btn.onclick = async function() {
+                    const id = btn.getAttribute('data-id');
+                    const row = btn.closest('tr');
+                    const status = row.querySelector('.status-select').value;
+                    const memo = row.querySelector('.memo-input').value;
+                    try {
+                        const res = await fetch('/student/update', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({id, status, memo})
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                            alert('성공적으로 저장되었습니다.');
+                        } else {
+                            alert(data.error || '저장 중 에러가 발생했습니다.');
+                        }
+                    } catch (error) {
+                        alert('저장 중 에러가 발생했습니다.');
+                    }
+                };
             });
         }
     }
