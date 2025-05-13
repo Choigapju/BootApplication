@@ -186,6 +186,51 @@
             table { min-width: 400px; }
             .memo-input { width: 100px; }
         }
+        .toolbar-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .upload-form {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin: 0;
+        }
+        #toolbar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .search-form {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .search-form input[type="text"] {
+            width: 160px;
+            min-width: 80px;
+        }
+        .upload-form input[type="file"] {
+            width: 160px;
+            min-width: 80px;
+        }
+        .upload-form button, .search-form button {
+            min-width: 90px;
+        }
+        @media (max-width: 700px) {
+            .toolbar-row, .search-form, .upload-form {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+            .search-form input[type="text"], .upload-form input[type="file"] {
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
@@ -212,26 +257,20 @@
         </div>
     </div>
     <div class="section">
-        <h2>CSV 업로드</h2>
-        <form class="upload-form" id="uploadForm" enctype="multipart/form-data">
-            <input type="file" name="file" required />
-            <button type="submit">업로드</button>
-        </form>
-        <div id="uploadMessage"></div>
-    </div>
-    <div class="section">
         <h2>지원자 조회</h2>
-        <form class="upload-form" id="uploadForm2" enctype="multipart/form-data" style="margin-bottom:16px;">
-            <input type="file" name="file" required />
-            <button type="submit">CSV 업로드</button>
-            <span id="uploadMessage2" style="margin-left:10px;"></span>
-        </form>
-        <div id="toolbar"></div>
+        <div class="toolbar-row">
+            <form class="upload-form" id="uploadForm" enctype="multipart/form-data">
+                <input type="file" name="file" required />
+                <button type="submit">CSV 업로드</button>
+            </form>
+            <div id="toolbar"></div>
+        </div>
         <form class="search-form" onsubmit="fetchStudents(); return false;">
-            <label>부트캠프: <input type="text" id="bootcamp"></label>
-            <label>기수: <input type="text" id="generation"></label>
+            <input type="text" id="bootcamp" placeholder="부트캠프명">
+            <input type="text" id="generation" placeholder="기수">
             <button type="submit">조회</button>
         </form>
+        <div id="uploadMessage" style="margin-bottom:10px;"></div>
         <div class="table-wrap">
             <table id="studentsTable">
                 <thead>
@@ -441,28 +480,6 @@
         } catch (error) {
             document.getElementById('uploadMessage').innerText = '서버 연결 중 에러가 발생했습니다.';
             document.getElementById('uploadMessage').style.color = 'red';
-        }
-    });
-
-    document.getElementById('uploadForm2').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const formData = new FormData(this);
-        try {
-            const res = await fetch('/upload', {method: 'POST', body: formData});
-            const data = await res.json();
-            if (res.ok) {
-                document.getElementById('uploadMessage2').innerText = data.message;
-                document.getElementById('uploadMessage2').style.color = 'green';
-                loadToolbar();
-                fetchStudents();
-                fetchStatusStats();
-            } else {
-                document.getElementById('uploadMessage2').innerText = data.error || '업로드 중 에러가 발생했습니다.';
-                document.getElementById('uploadMessage2').style.color = 'red';
-            }
-        } catch (error) {
-            document.getElementById('uploadMessage2').innerText = '서버 연결 중 에러가 발생했습니다.';
-            document.getElementById('uploadMessage2').style.color = 'red';
         }
     });
 
