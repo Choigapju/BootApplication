@@ -254,21 +254,26 @@
             display: flex;
             gap: 18px;
             margin: 18px 0 12px 0;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             justify-content: flex-start;
+            align-items: stretch;
         }
         .dashboard-card {
             background: #fff;
             border-radius: 14px;
             box-shadow: 0 2px 8px rgba(63,63,63,0.06);
             padding: 18px 18px 12px 18px;
-            min-width: 180px;
-            max-width: 320px;
-            flex: 1 1 220px;
+            min-width: 220px;
+            max-width: 360px;
+            flex: 1 1 0;
             display: flex;
             flex-direction: column;
             align-items: flex-start;
             box-sizing: border-box;
+            margin: 0 0 0 0;
+        }
+        .dashboard-card:not(:last-child) {
+            margin-right: 18px;
         }
         .stat-cards {
             display: flex;
@@ -314,14 +319,15 @@
             display: block;
         }
         @media (max-width: 1100px) {
-            .dashboard-row { flex-direction: column; gap: 10px; }
-            .dashboard-card { width: 100%; max-width: 98vw; }
+            .dashboard-row { flex-direction: column; gap: 10px; flex-wrap: wrap; }
+            .dashboard-card { width: 100%; max-width: 98vw; margin-right: 0; }
             #statusDonut, #statusTable, #pendingBar { max-width: 98vw; }
         }
         @media (max-width: 700px) {
             #statusDonut, #statusTable, #pendingBar { max-width: 99vw; }
-            .dashboard-card { padding: 8px 2vw; }
+            .dashboard-card { padding: 8px 2vw; min-width: 0; }
             .stat-card { font-size: 0.92rem; min-width: 60px; }
+            .dashboard-row { flex-direction: column; gap: 8px; }
         }
         .table-toolbar {
             display: flex;
