@@ -349,8 +349,8 @@
     </div>
     <div class="section">
         <h2>지원자 조회</h2>
-        <div class="table-toolbar" style="justify-content:space-between; align-items:flex-end; flex-wrap:wrap;">
-            <div id="toolbar" style="flex:1 1 auto; display:flex; gap:8px;"></div>
+        <div id="bootcamp-buttons" style="margin-bottom:18px; display:flex; gap:10px; flex-wrap:wrap;"></div>
+        <div class="table-toolbar" style="justify-content:flex-end; align-items:flex-end; flex-wrap:wrap;">
             <form class="upload-form" id="uploadForm" enctype="multipart/form-data" style="margin:0;">
                 <input type="file" name="file" required />
                 <button type="submit"><span style="font-size:1.2em;">⬆️</span> 지원 데이터 업로드</button>
@@ -494,32 +494,31 @@
     }
 
     // 부트캠프/기수별 버튼
-    async function loadToolbar() {
+    async function renderBootcampButtons() {
         const res = await fetch('/bootcamps');
         const data = await res.json();
-        const toolbar = document.getElementById('toolbar');
-        toolbar.innerHTML = '';
-        // 중복 제거 및 버튼 생성
+        const container = document.getElementById('bootcamp-buttons');
+        container.innerHTML = '';
         const unique = Array.from(new Set(data.map(b => b.name + '||' + b.generation)))
             .map(str => {
                 const [name, generation] = str.split('||');
                 return {name, generation};
             });
         unique.forEach(b => {
-            const container = document.createElement('div');
-            container.className = 'bootcamp-item';
             const btn = document.createElement('button');
+            btn.className = 'bootcamp-item';
             btn.innerText = `${b.name} / ${b.generation}`;
             btn.onclick = function() {
-                document.getElementById('bootcamp').value = b.name;
-                document.getElementById('generation').value = b.generation;
+                window.selectedBootcamp = b.name;
+                window.selectedGeneration = b.generation;
                 fetchStudents();
                 fetchStatusStats();
             };
             const deleteBtn = document.createElement('button');
             deleteBtn.innerText = '삭제';
             deleteBtn.className = 'delete-btn';
-            deleteBtn.onclick = async function() {
+            deleteBtn.onclick = async function(e) {
+                e.stopPropagation();
                 if (confirm(`정말로 ${b.name} ${b.generation}기 데이터를 삭제하시겠습니까?`)) {
                     try {
                         const res = await fetch('/bootcamp/delete', {
@@ -530,7 +529,7 @@
                         const data = await res.json();
                         if (res.ok) {
                             alert(data.message);
-                            loadToolbar();
+                            renderBootcampButtons();
                             fetchStudents();
                             fetchStatusStats();
                         } else {
@@ -541,9 +540,8 @@
                     }
                 }
             };
+            btn.appendChild(deleteBtn);
             container.appendChild(btn);
-            container.appendChild(deleteBtn);
-            toolbar.appendChild(container);
         });
     }
 
@@ -557,7 +555,7 @@
             if (res.ok) {
                 document.getElementById('uploadMessage').innerText = data.message;
                 document.getElementById('uploadMessage').style.color = 'green';
-                loadToolbar();
+                renderBootcampButtons();
                 fetchStudents();
                 fetchStatusStats();
             } else {
@@ -630,7 +628,7 @@
 
     // 페이지 로딩 시 초기화
     document.addEventListener('DOMContentLoaded', function() {
-        loadToolbar();
+        renderBootcampButtons();
         fetchStatusStats();
         fetchStudents();
     });
