@@ -349,12 +349,13 @@
     </div>
     <div class="section">
         <h2>지원자 조회</h2>
-        <div class="table-toolbar">
-            <select id="bootcampFilter">
-                <option value="">전체 부트캠프</option>
-                <!-- JS로 옵션 추가 -->
-            </select>
-            <input type="text" id="searchInput" placeholder="이름 또는 전화번호 검색...">
+        <div class="table-toolbar" style="justify-content:space-between; align-items:flex-end; flex-wrap:wrap;">
+            <div id="toolbar" style="flex:1 1 auto; display:flex; gap:8px;"></div>
+            <form class="upload-form" id="uploadForm" enctype="multipart/form-data" style="margin:0;">
+                <input type="file" name="file" required />
+                <button type="submit"><span style="font-size:1.2em;">⬆️</span> 지원 데이터 업로드</button>
+            </form>
+            <input type="text" id="searchInput" placeholder="이름 또는 전화번호 검색..." style="flex:0 0 200px;">
         </div>
         <div id="uploadMessage" style="margin-bottom:10px;"></div>
         <div class="table-wrap">
@@ -376,14 +377,6 @@
                 <tbody></tbody>
             </table>
         </div>
-    </div>
-    <div class="section">
-        <h2>CSV 업로드</h2>
-        <form class="upload-form" id="uploadForm" enctype="multipart/form-data">
-            <input type="file" name="file" required />
-            <button type="submit"><span style="font-size:1.2em;">⬆️</span> 지원 데이터 업로드</button>
-        </form>
-        <div id="uploadMessage" style="margin-bottom:10px;"></div>
     </div>
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
