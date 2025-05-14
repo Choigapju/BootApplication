@@ -232,45 +232,134 @@
                 justify-content: flex-end;
             }
         }
+        .main-header {
+            width: 100vw;
+            background: #FF7710;
+            color: #fff;
+            font-size: 2rem;
+            font-weight: 900;
+            padding: 24px 0 18px 32px;
+            letter-spacing: -1px;
+            box-sizing: border-box;
+        }
+        .dashboard-row {
+            display: flex;
+            gap: 24px;
+            margin: 32px 0 24px 0;
+            flex-wrap: wrap;
+        }
+        .dashboard-card {
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 2px 8px rgba(63,63,63,0.06);
+            padding: 24px 32px;
+            min-width: 260px;
+            flex: 1 1 0;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        .stat-cards {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-top: 12px;
+        }
+        .stat-card {
+            background: #F8F8F8;
+            border-radius: 12px;
+            padding: 16px 20px;
+            min-width: 90px;
+            text-align: center;
+            font-size: 1.1rem;
+            box-shadow: 0 1px 4px rgba(63,63,63,0.04);
+        }
+        .stat-num {
+            color: #FF7710;
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+        @media (max-width: 1100px) {
+            .dashboard-row { flex-direction: column; }
+            .dashboard-card { width: 100%; }
+        }
+        .table-toolbar {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        .table-toolbar select, .table-toolbar input[type="text"] {
+            border: 1.5px solid #FF7710;
+            border-radius: 8px;
+            padding: 8px 12px;
+            background: #FFFAF5;
+            color: #3F3F3F;
+            font-size: 1rem;
+        }
+        .table-toolbar button {
+            background: #FF7710;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+            box-shadow: 0 2px 8px rgba(255,119,16,0.08);
+        }
+        .table-toolbar button:hover {
+            background: #e65c00;
+        }
+        @media (max-width: 900px) {
+            .table-toolbar { flex-direction: column; align-items: stretch; }
+        }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="header-title">부트캠프 지원자 관리</div>
+    <div class="main-header">
+        <span>KDT 교육 지원자 관리 시스템</span>
     </div>
     <div class="section">
         <h2>통계</h2>
-        <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
-            <div>
-                <table id="statusTable">
-                    <thead>
-                        <tr>
-                            <th>상태</th>
-                            <th>인원수</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
+        <div class="dashboard-row">
+            <div class="dashboard-card">
+                <h3>현황</h3>
+                <div class="stat-cards">
+                    <div class="stat-card"><div>전체</div><div class="stat-num" id="stat-total">0명</div></div>
+                    <div class="stat-card"><div>지원중</div><div class="stat-num" id="stat-apply">0명</div></div>
+                    <div class="stat-card"><div>합격 처리</div><div class="stat-num" id="stat-pass">0명</div></div>
+                    <div class="stat-card"><div>고민중</div><div class="stat-num" id="stat-pending">0명</div></div>
+                    <div class="stat-card"><div>HRD 최종 등록</div><div class="stat-num" id="stat-hrd">0명</div></div>
+                    <div class="stat-card"><div>수강 취소</div><div class="stat-num" id="stat-cancel">0명</div></div>
+                </div>
             </div>
-            <div>
-                <canvas id="statusPie" width="300" height="300"></canvas>
+            <div class="dashboard-card">
+                <h3>진행 상태</h3>
+                <canvas id="statusDonut" width="220" height="220"></canvas>
+            </div>
+            <div class="dashboard-card">
+                <h3>고민중 이유</h3>
+                <canvas id="pendingBar" width="220" height="220"></canvas>
             </div>
         </div>
     </div>
     <div class="section">
         <h2>지원자 조회</h2>
-        <div class="toolbar-row">
-            <div id="toolbar"></div>
+        <div class="table-toolbar">
+            <select id="bootcampFilter">
+                <option value="">전체 부트캠프</option>
+                <!-- JS로 옵션 추가 -->
+            </select>
+            <input type="text" id="searchInput" placeholder="이름 또는 전화번호 검색...">
             <form class="upload-form" id="uploadForm" enctype="multipart/form-data">
                 <input type="file" name="file" required />
-                <button type="submit">CSV 업로드</button>
+                <button type="submit"><span style="font-size:1.2em;">⬆️</span> 지원 데이터 업로드</button>
             </form>
         </div>
-        <form class="search-form" onsubmit="fetchStudents(); return false;">
-            <input type="text" id="bootcamp" placeholder="부트캠프명">
-            <input type="text" id="generation" placeholder="기수">
-            <button type="submit">조회</button>
-        </form>
         <div id="uploadMessage" style="margin-bottom:10px;"></div>
         <div class="table-wrap">
             <table id="studentsTable">
