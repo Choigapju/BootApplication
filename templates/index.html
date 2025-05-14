@@ -622,10 +622,6 @@
         });
     }
 
-    // 부트캠프/기수 입력값 변경 시 통계 자동 갱신
-    document.getElementById('bootcamp').addEventListener('change', fetchStatusStats);
-    document.getElementById('generation').addEventListener('change', fetchStatusStats);
-
     // 페이지 로딩 시 초기화
     document.addEventListener('DOMContentLoaded', function() {
         renderBootcampButtons();
