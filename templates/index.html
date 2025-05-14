@@ -99,10 +99,18 @@
             display: inline-block;
             margin: 5px 10px 5px 0;
             padding: 8px 16px;
-            background: var(--main-bg);
+            background: #fff;
             border-radius: 8px;
             box-shadow: 0 1px 4px rgba(63,63,63,0.04);
-            font-weight: 600;
+            font-weight: 700;
+            color: #FF7710;
+            border: 2px solid #FF7710;
+            cursor: pointer;
+            transition: background 0.18s, color 0.18s;
+        }
+        .bootcamp-item:hover, .bootcamp-item.active {
+            background: #FF7710;
+            color: #fff;
         }
         .table-wrap {
             overflow-x: auto;
@@ -387,6 +395,7 @@
         const generation = window.selectedGeneration || '';
         const res = await fetch(`/stats_by_status?bootcamp=${encodeURIComponent(bootcamp)}&generation=${encodeURIComponent(generation)}`);
         const data = await res.json();
+        console.log('통계 데이터:', data);
 
         // 표
         const tbody = document.querySelector('#statusTable tbody');
