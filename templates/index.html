@@ -399,11 +399,11 @@
             });
         }
 
-        // 파이차트
-        const ctx = document.getElementById('statusPie').getContext('2d');
-        if(window.statusPieChart) window.statusPieChart.destroy();
-        window.statusPieChart = new Chart(ctx, {
-            type: 'pie',
+        // 진행 상태 도넛 차트
+        const donutCtx = document.getElementById('statusDonut').getContext('2d');
+        if(window.statusDonutChart) window.statusDonutChart.destroy();
+        window.statusDonutChart = new Chart(donutCtx, {
+            type: 'doughnut',
             data: {
                 labels: Object.keys(data),
                 datasets: [{
@@ -418,7 +418,6 @@
                 }]
             },
             options: {
-                responsive: false,
                 plugins: {
                     legend: { position: 'bottom' }
                 }
