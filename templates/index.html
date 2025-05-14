@@ -383,9 +383,9 @@
     <script>
     // 통계(상태별 인원수+파이차트)
     async function fetchStatusStats() {
-        const bootcamp = document.getElementById('bootcamp').value;
-        const generation = document.getElementById('generation').value;
-        const res = await fetch(`/stats_by_status?bootcamp=${bootcamp}&generation=${generation}`);
+        const bootcamp = window.selectedBootcamp || '';
+        const generation = window.selectedGeneration || '';
+        const res = await fetch(`/stats_by_status?bootcamp=${encodeURIComponent(bootcamp)}&generation=${encodeURIComponent(generation)}`);
         const data = await res.json();
 
         // 표
@@ -428,9 +428,9 @@
 
     // 지원자 목록 조회
     async function fetchStudents() {
-        const bootcamp = document.getElementById('bootcamp').value;
-        const generation = document.getElementById('generation').value;
-        let url = `/students?bootcamp=${bootcamp}&generation=${generation}`;
+        const bootcamp = window.selectedBootcamp || '';
+        const generation = window.selectedGeneration || '';
+        let url = `/students?bootcamp=${encodeURIComponent(bootcamp)}&generation=${encodeURIComponent(generation)}`;
         const res = await fetch(url);
         const data = await res.json();
         const tbody = document.querySelector('#studentsTable tbody');
