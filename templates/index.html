@@ -483,10 +483,10 @@
         // 현황 카드 숫자 자동 반영
         const statusMap = {
             '지원중': 'stat-apply',
-            '합격 처리': 'stat-pass',
+            '합격': 'stat-pass',
             '고민중': 'stat-pending',
-            'HRD 최종 등록': 'stat-hrd',
-            '수강 취소': 'stat-cancel',
+            'HRD최종등록': 'stat-hrd',
+            '지원취소': 'stat-cancel',
         };
         let total = 0;
         for (const [status, count] of Object.entries(data)) {
