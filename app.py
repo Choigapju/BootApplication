@@ -156,13 +156,16 @@ def upload_csv():
 # 부트캠프/기수별 지원자 리스트
 @app.route('/students', methods=['GET'])
 def get_students():
-    bootcamp = request.args.get('bootcamp')
-    generation = request.args.get('generation')
+    bootcamp = request.args.get('bootcamp', '')
+    generation = request.args.get('generation', '')
+    status = request.args.get('status', '')
     query = db.session.query(Student, Bootcamp).join(Bootcamp)
     if bootcamp:
         query = query.filter(Bootcamp.name == bootcamp)
     if generation:
         query = query.filter(Bootcamp.generation == generation)
+    if status:
+        query = query.filter(Student.status == status)
     results = []
     for student, bootcamp in query.all():
         results.append({
