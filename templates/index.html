@@ -422,6 +422,14 @@
                 <button type="submit"><span style="font-size:1.2em;">⬆️</span> 지원 데이터 업로드</button>
             </form>
             <input type="text" id="searchInput" placeholder="이름 또는 전화번호 검색..." style="flex:0 0 200px;">
+            <select id="statusFilter" style="margin-left:8px;">
+                <option value="">전체 상태</option>
+                <option value="지원중">지원중</option>
+                <option value="합격">합격</option>
+                <option value="고민중">고민중</option>
+                <option value="HRD최종등록">HRD최종등록</option>
+                <option value="지원취소">지원취소</option>
+            </select>
         </div>
         <div id="uploadMessage" style="margin-bottom:10px;"></div>
         <div class="table-wrap">
@@ -511,7 +519,8 @@
     async function fetchStudents() {
         const bootcamp = window.selectedBootcamp || '';
         const generation = window.selectedGeneration || '';
-        let url = `/students?bootcamp=${encodeURIComponent(bootcamp)}&generation=${encodeURIComponent(generation)}`;
+        const status = document.getElementById('statusFilter').value || '';
+        let url = `/students?bootcamp=${encodeURIComponent(bootcamp)}&generation=${encodeURIComponent(generation)}&status=${encodeURIComponent(status)}`;
         const res = await fetch(url);
         const data = await res.json();
         const tbody = document.querySelector('#studentsTable tbody');
@@ -709,6 +718,8 @@
         fetchStatusStats();
         fetchStudents();
     });
+
+    document.getElementById('statusFilter').addEventListener('change', fetchStudents);
     </script>
 </body>
 </html>
