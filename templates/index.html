@@ -455,17 +455,6 @@
         const data = await res.json();
         console.log('통계 데이터:', data);
 
-        // 표
-        const tbody = document.querySelector('#statusTable tbody');
-        tbody.innerHTML = '';
-        if (Object.keys(data).length === 0) {
-            tbody.innerHTML = `<tr><td colspan="2" class="no-data">데이터가 없습니다</td></tr>`;
-        } else {
-            Object.entries(data).forEach(([status, count]) => {
-                tbody.innerHTML += `<tr><td>${status}</td><td>${count}</td></tr>`;
-            });
-        }
-
         // 진행 상태 도넛 차트
         const donutCtx = document.getElementById('statusDonut').getContext('2d');
         if(window.statusDonutChart) window.statusDonutChart.destroy();
