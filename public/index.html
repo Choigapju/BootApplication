@@ -469,12 +469,131 @@
         .tab-btn.active span {
             color: #ff6b00;
         }
+<<<<<<< HEAD
+=======
+
+        .loading-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            display: none;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #FF5722;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 300px;
+            text-align: center;
+        }
+
+        .modal-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #FF5722;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        button {
+            padding: 8px 16px;
+            background-color: #FF5722;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #F4511E;
+        }
+
+        .alert-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            display: none;
+        }
+
+        .alert-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 300px;
+            text-align: center;
+        }
+
+        .alert-message {
+            margin-bottom: 15px;
+        }
+
+        .alert-button {
+            padding: 8px 16px;
+            background-color: #FF5722;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .alert-button:hover {
+            background-color: #F4511E;
+        }
+>>>>>>> boot
     </style>
 </head>
 <body>
     <!-- 로딩 인디케이터 -->
+<<<<<<< HEAD
     <div class="loader-container" id="loaderContainer">
         <div class="loader"></div>
+=======
+    <div class="loading-container" style="display: none;">
+        <div class="loading-spinner"></div>
+>>>>>>> boot
     </div>
 
     <!-- 모달 -->
@@ -514,6 +633,25 @@
         </div>
     </div>
 
+<<<<<<< HEAD
+=======
+    <!-- 모달 추가 -->
+    <div id="loadingModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-spinner"></div>
+            <p>데이터를 불러오는 중입니다...</p>
+        </div>
+    </div>
+
+    <!-- 알림 모달 추가 -->
+    <div id="alertModal" class="modal">
+        <div class="modal-content">
+            <p id="alertMessage"></p>
+            <button onclick="closeAlertModal()">확인</button>
+        </div>
+    </div>
+
+>>>>>>> boot
     <!-- 헤더 -->
     <header>
         <h1>KDT 교육 지원자 관리 시스템</h1>
@@ -770,6 +908,7 @@
         }
 
         // 특정 부트캠프 데이터 로드 함수
+<<<<<<< HEAD
         function fetchBootcampData(bootcampValue) {
             loaderContainer.style.display = 'flex';
             
@@ -805,12 +944,34 @@
                         generateDummyDataForBootcamp(bootcampValue, 10);
                     }
                 });
+=======
+        async function fetchBootcampData(bootcampId) {
+            try {
+                showLoading();
+                const response = await fetch(`${API_URL}/bootcamps/${bootcampId}/students`);
+                if (!response.ok) {
+                    throw new Error('서버 응답 오류');
+                }
+                const data = await response.json();
+                hideLoading();
+                return data;
+            } catch (error) {
+                hideLoading();
+                showAlert('데이터를 불러오는 중 오류가 발생했습니다. 다시 시도해주세요.');
+                console.error('Error:', error);
+                throw error;
+            }
+>>>>>>> boot
         }
 
         // 서버에서 학생 데이터 가져오기
         async function fetchStudents() {
             try {
+<<<<<<< HEAD
                 loaderContainer.style.display = 'flex';
+=======
+                showLoading();
+>>>>>>> boot
                 
                 const response = await fetch(`${API_URL}/students`);
                 
@@ -825,6 +986,7 @@
                 updateStats();
                 updateCharts();
                 
+<<<<<<< HEAD
                 loaderContainer.style.display = 'none';
             } catch (error) {
                 console.error('데이터 가져오기 오류:', error);
@@ -834,6 +996,13 @@
                 if (students.length === 0) {
                     generateDummyData(30);
                 }
+=======
+                hideLoading();
+            } catch (error) {
+                hideLoading();
+                showAlert('데이터를 불러오는 중 오류가 발생했습니다. 페이지를 새로고침해주세요.');
+                console.error('Error:', error);
+>>>>>>> boot
             }
         }
 
@@ -842,7 +1011,11 @@
             const file = event.target.files[0];
             if (!file) return;
             
+<<<<<<< HEAD
             loaderContainer.style.display = 'flex';
+=======
+            showLoading();
+>>>>>>> boot
             
             try {
                 const formData = new FormData();
@@ -872,11 +1045,20 @@
                     fetchBootcampData(currentBootcamp);
                 }
                 
+<<<<<<< HEAD
                 alert(`${result.count}명의 학생 데이터가 성공적으로 업로드되었습니다.`);
             } catch (error) {
                 console.error('파일 업로드 오류:', error);
                 alert(error.message || '파일 업로드 중 오류가 발생했습니다.');
                 loaderContainer.style.display = 'none';
+=======
+                hideLoading();
+                showAlert(`${result.count}명의 학생 데이터가 성공적으로 업로드되었습니다.`);
+            } catch (error) {
+                hideLoading();
+                showAlert('파일 업로드 중 오류가 발생했습니다. 다시 시도해주세요.');
+                console.error('Error:', error);
+>>>>>>> boot
             }
             
             // 파일 입력 초기화
@@ -1107,7 +1289,10 @@
                 // 화면 업데이트
                 handleTabChange(currentTab);
                 updateStats();
+<<<<<<< HEAD
                 updateCharts();
+=======
+>>>>>>> boot
                 
                 alert('서버 연결 실패: 변경사항이 임시로 저장되었습니다.');
             }
@@ -1399,6 +1584,26 @@
         window.handleStatusChange = handleStatusChange;
         window.handleNoteChange = handleNoteChange;
         window.callStudent = callStudent;
+<<<<<<< HEAD
+=======
+
+        function showLoading() {
+            document.getElementById('loadingModal').style.display = 'block';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingModal').style.display = 'none';
+        }
+
+        function showAlert(message) {
+            document.getElementById('alertMessage').textContent = message;
+            document.getElementById('alertModal').style.display = 'block';
+        }
+
+        function closeAlertModal() {
+            document.getElementById('alertModal').style.display = 'none';
+        }
+>>>>>>> boot
     </script>
 </body>
 </html>

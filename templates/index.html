@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>부트캠프 지원자 관리</title>
+    <!-- Pretendard 폰트 CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+    <style>
+        :root {
+            --main-orange: #FF7710;
+            --main-bg: #FFFAF5;
+            --main-dark: #3F3F3F;
+            --main-white: #fff;
+            --main-shadow: 0 2px 8px rgba(63,63,63,0.06);
+        }
+        body {
+            font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
+            background: var(--main-bg);
+            color: var(--main-dark);
+            margin: 0;
+            padding: 0;
+        }
+        .header {
+            background: var(--main-white);
+            box-shadow: var(--main-shadow);
+            padding: 24px 0 16px 0;
+            text-align: center;
+            width: 100%;
+        }
+        .header-title {
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: var(--main-dark);
+            letter-spacing: -1px;
+        }
+        .section {
+            background: var(--main-white);
+            border-radius: 18px;
+            box-shadow: var(--main-shadow);
+            margin: 32px 0;
+            padding: 32px 3vw;
+            max-width: 100vw;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        h2 {
+            font-weight: 800;
+            margin-top: 0;
+            color: var(--main-dark);
+            margin-bottom: 24px;
+        }
+        .upload-form, .search-form {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        input[type="text"], input[type="file"], select {
+            border: 1.5px solid var(--main-orange);
+            border-radius: 8px;
+            padding: 8px 12px;
+            background: var(--main-bg);
+            color: var(--main-dark);
+            font-size: 1rem;
+        }
+        input[type="file"] {
+            padding: 6px 0;
+        }
+        button, .save-btn {
+            background: var(--main-orange);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+            box-shadow: 0 2px 8px rgba(255,119,16,0.08);
+        }
+        button:hover, .save-btn:hover {
+            background: #e65c00;
+        }
+        .delete-btn {
+            background: #fff;
+            color: var(--main-orange);
+            border: 1.5px solid var(--main-orange);
+            font-weight: 700;
+            border-radius: 8px;
+            padding: 6px 14px;
+            margin-left: 8px;
+            transition: background 0.2s, color 0.2s;
+        }
+        .delete-btn:hover {
+            background: var(--main-orange);
+            color: #fff;
+        }
+        .bootcamp-item {
+            display: inline-block;
+            margin: 5px 10px 5px 0;
+            padding: 8px 16px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 1px 4px rgba(63,63,63,0.04);
+            font-weight: 700;
+            color: #FF7710;
+            border: 2px solid #FF7710;
+            cursor: pointer;
+            transition: background 0.18s, color 0.18s;
+        }
+        .bootcamp-item:hover, .bootcamp-item.active {
+            background: #FF7710;
+            color: #fff;
+        }
+        .table-wrap {
+            overflow-x: auto;
+            width: 100%;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            min-width: 900px;
+            background: var(--main-white);
+            margin-bottom: 16px;
+        }
+        th, td {
+            padding: 10px 14px;
+            text-align: center;
+        }
+        th {
+            background: var(--main-bg);
+            color: var(--main-dark);
+            font-weight: 700;
+            border-bottom: 2px solid var(--main-orange);
+        }
+        tr {
+            transition: background 0.15s;
+        }
+        tr:hover {
+            background: #FFF3E5;
+        }
+        .status-select {
+            border: 1.5px solid var(--main-orange);
+            border-radius: 8px;
+            padding: 6px 10px;
+            background: var(--main-bg);
+            color: var(--main-dark);
+        }
+        .memo-input {
+            width: 180px;
+            border: 1.5px solid var(--main-orange);
+            border-radius: 8px;
+            padding: 6px 10px;
+            background: var(--main-bg);
+            color: var(--main-dark);
+        }
+        #uploadMessage {
+            margin-top: 10px;
+            font-weight: 600;
+        }
+        canvas#statusPie {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: var(--main-shadow);
+            margin-top: 10px;
+        }
+        .statistics-table {
+            margin-top: 32px;
+        }
+        .statistics-table th {
+            background: var(--main-bg);
+            color: var(--main-dark);
+        }
+        .statistics-table tr:hover {
+            background: #FFF3E5;
+        }
+        .no-data {
+            text-align: center;
+            color: #aaa;
+            padding: 24px 0;
+        }
+        @media (max-width: 1200px) {
+            .section { padding: 24px 1vw; }
+            table { min-width: 700px; }
+        }
+        @media (max-width: 900px) {
+            .section { padding: 12px 0.5vw; }
+            table { min-width: 600px; }
+        }
+        @media (max-width: 700px) {
+            .section { padding: 8px 0; }
+            .header-title { font-size: 1.1rem; }
+            th, td { font-size: 0.92rem; }
+            table { min-width: 400px; }
+            .memo-input { width: 100px; }
+        }
+        .toolbar-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .upload-form {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin: 0;
+        }
+        #toolbar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .search-form {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .search-form input[type="text"] {
+            width: 160px;
+            min-width: 80px;
+        }
+        .upload-form input[type="file"] {
+            width: 160px;
+            min-width: 80px;
+        }
+        .upload-form button, .search-form button {
+            min-width: 90px;
+        }
+        @media (max-width: 900px) {
+            .toolbar-row {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+            .upload-form {
+                justify-content: flex-end;
+            }
+        }
+        .main-header {
+            width: 100vw;
+            background: #FF7710;
+            color: #fff;
+            font-size: 2rem;
+            font-weight: 900;
+            padding: 24px 0 18px 32px;
+            letter-spacing: -1px;
+            box-sizing: border-box;
+        }
+        .dashboard-section {
+            width: 100%;
+            margin: 20px 0;
+        }
+        
+        .dashboard-row {
+            display: flex;
+            gap: 20px;
+            justify-content: flex-start;
+            align-items: stretch;
+            flex-wrap: nowrap;
+        }
+        
+        .dashboard-card {
+            flex: 1;
+            min-width: 300px;
+            max-width: 500px;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .stat-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-card > div:first-child {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .stat-num {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        #statusDonut {
+            width: 100% !important;
+            height: auto !important;
+            max-width: 220px;
+            margin: 0 auto;
+            display: block;
+        }
+        #statusTable {
+            width: 100%;
+            max-width: 180px;
+            margin: 8px auto 0 auto;
+            font-size: 0.98rem;
+        }
+        #pendingBar {
+            width: 100% !important;
+            max-width: 180px;
+            height: auto !important;
+            aspect-ratio: 1/1;
+            margin: 0 auto 8px auto;
+            display: block;
+        }
+        @media (max-width: 1100px) {
+            .dashboard-row { flex-direction: column; gap: 10px; flex-wrap: wrap; }
+            .dashboard-card { width: 100%; max-width: 98vw; margin-right: 0; }
+            #statusDonut, #statusTable, #pendingBar { max-width: 98vw; }
+        }
+        @media (max-width: 700px) {
+            #statusDonut, #statusTable, #pendingBar { max-width: 99vw; }
+            .dashboard-card { padding: 8px 2vw; min-width: 0; }
+            .stat-card { font-size: 0.92rem; min-width: 60px; }
+            .dashboard-row { flex-direction: column; gap: 8px; }
+        }
+        .table-toolbar {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+        .table-toolbar select, .table-toolbar input[type="text"] {
+            border: 1.5px solid #FF7710;
+            border-radius: 8px;
+            padding: 8px 12px;
+            background: #FFFAF5;
+            color: #3F3F3F;
+            font-size: 1rem;
+        }
+        .table-toolbar button {
+            background: #FF7710;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.2s;
+            box-shadow: 0 2px 8px rgba(255,119,16,0.08);
+        }
+        .table-toolbar button:hover {
+            background: #e65c00;
+        }
+        @media (max-width: 900px) {
+            .table-toolbar { flex-direction: column; align-items: stretch; }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-header">
+        <span>KDT 교육 지원자 관리 시스템</span>
+    </div>
+    <div class="section">
+        <h2>통계</h2>
+        <div class="dashboard-section">
+            <div class="dashboard-row">
+                <!-- 현황 카드 -->
+                <div class="dashboard-card">
+                    <h3>현황</h3>
+                    <div class="stat-cards">
+                        <div class="stat-card">
+                            <div>전체</div>
+                            <div class="stat-num" id="stat-total">0명</div>
+                        </div>
+                        <div class="stat-card">
+                            <div>지원중</div>
+                            <div class="stat-num" id="stat-apply">0명</div>
+                        </div>
+                        <div class="stat-card">
+                            <div>합격 처리</div>
+                            <div class="stat-num" id="stat-pass">0명</div>
+                        </div>
+                        <div class="stat-card">
+                            <div>고민중</div>
+                            <div class="stat-num" id="stat-pending">0명</div>
+                        </div>
+                        <div class="stat-card">
+                            <div>HRD 최종 등록</div>
+                            <div class="stat-num" id="stat-hrd">0명</div>
+                        </div>
+                        <div class="stat-card">
+                            <div>수강 취소</div>
+                            <div class="stat-num" id="stat-cancel">0명</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 진행상태 카드 -->
+                <div class="dashboard-card">
+                    <h3>진행 상태</h3>
+                    <canvas id="statusDonut" width="220" height="220"></canvas>
+                </div>
+                <!-- 메모 표시 카드 추가 -->
+                <div class="dashboard-card" id="memoCard">
+                    <h3>최근 메모</h3>
+                    <ul id="memoList" style="padding-left:18px;"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="section">
+        <h2>지원자 조회</h2>
+        <div id="bootcamp-buttons" style="margin-bottom:18px; display:flex; gap:10px; flex-wrap:wrap;"></div>
+        <div class="table-toolbar" style="justify-content:space-between; align-items:flex-end; flex-wrap:wrap;">
+            <select id="statusFilter" style="margin-right:12px;">
+                <option value="">전체 상태</option>
+                <option value="지원중">지원중</option>
+                <option value="합격">합격</option>
+                <option value="고민중">고민중</option>
+                <option value="HRD최종등록">HRD최종등록</option>
+                <option value="지원취소">지원취소</option>
+            </select>
+            <form class="upload-form" id="uploadForm" enctype="multipart/form-data" style="margin:0;">
+                <input type="file" name="file" required />
+                <button type="submit"><span style="font-size:1.2em;">⬆️</span> 지원 데이터 업로드</button>
+            </form>
+            <input type="text" id="searchInput" placeholder="이름 또는 전화번호 검색..." style="flex:0 0 200px;">
+        </div>
+        <div id="uploadMessage" style="margin-bottom:10px;"></div>
+        <div class="table-wrap">
+            <table id="studentsTable">
+                <thead>
+                    <tr>
+                        <th>부트캠프</th>
+                        <th>기수</th>
+                        <th>이름</th>
+                        <th>이메일</th>
+                        <th>성별</th>
+                        <th>나이</th>
+                        <th>전화번호</th>
+                        <th>상태</th>
+                        <th>메모</th>
+                        <th>액션</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+    // 통계(상태별 인원수+파이차트)
+    async function fetchStatusStats() {
+        const bootcamp = window.selectedBootcamp || '';
+        const generation = window.selectedGeneration || '';
+        const res = await fetch(`/stats_by_status?bootcamp=${encodeURIComponent(bootcamp)}&generation=${encodeURIComponent(generation)}`);
+        const data = await res.json();
+        console.log('통계 데이터:', data);
+
+        // 진행 상태 도넛 차트
+        const donutCtx = document.getElementById('statusDonut').getContext('2d');
+        if(window.statusDonutChart) window.statusDonutChart.destroy();
+        window.statusDonutChart = new Chart(donutCtx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(data),
+                datasets: [{
+                    data: Object.values(data),
+                    backgroundColor: [
+                        '#FF7710', // 지원중
+                        '#3F3F3F', // 합격
+                        '#FFB84D', // 고민중
+                        '#A0A0A0', // HRD최종등록
+                        '#FFFAF5'  // 기타
+                    ]
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: { position: 'bottom' }
+                }
+            }
+        });
+
+        // 현황 카드 숫자 자동 반영
+        const statusMap = {
+            '지원중': 'stat-apply',
+            '합격': 'stat-pass',
+            '고민중': 'stat-pending',
+            'HRD최종등록': 'stat-hrd',
+            '지원취소': 'stat-cancel',
+        };
+        let total = 0;
+        for (const [status, count] of Object.entries(data)) {
+            total += count;
+            const elId = statusMap[status];
+            if (elId) {
+                const el = document.getElementById(elId);
+                if (el) el.innerText = count + '명';
+            }
+        }
+        document.getElementById('stat-total').innerText = total + '명';
+        // 상태가 없는 항목은 0으로 초기화
+        Object.values(statusMap).forEach(id => {
+            if (!Object.values(data).length || !Object.keys(data).some(k => statusMap[k] === id)) {
+                const el = document.getElementById(id);
+                if (el) el.innerText = '0명';
+            }
+        });
+    }
+
+    // 지원자 목록 조회
+    async function fetchStudents() {
+        const bootcamp = window.selectedBootcamp || '';
+        const generation = window.selectedGeneration || '';
+        const status = document.getElementById('statusFilter').value || '';
+        let url = `/students?bootcamp=${encodeURIComponent(bootcamp)}&generation=${encodeURIComponent(generation)}&status=${encodeURIComponent(status)}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        const tbody = document.querySelector('#studentsTable tbody');
+        tbody.innerHTML = '';
+        if (data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="10" class="no-data">지원자 데이터가 없습니다</td></tr>`;
+        } else {
+            const STATUS_OPTIONS = ['지원중', '합격', '고민중', 'HRD최종등록', '지원취소'];
+            data.forEach(s => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${s.bootcamp}</td>
+                    <td>${s.generation}</td>
+                    <td>${s.name}</td>
+                    <td>${s.email}</td>
+                    <td>${s.gender}</td>
+                    <td>${s.age}</td>
+                    <td>${s.phone}</td>
+                    <td>
+                        <select class="status-select" data-id="${s.id}">
+                            ${STATUS_OPTIONS.map(option =>
+                                `<option value="${option}" ${s.status === option ? 'selected' : ''}>${option}</option>`
+                            ).join('')}
+                        </select>
+                    </td>
+                    <td>
+                        <input type="text" class="memo-input" data-id="${s.id}" value="${s.memo || ''}" placeholder="메모 입력...">
+                    </td>
+                    <td>
+                        <button class="save-btn" data-id="${s.id}">저장</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // 저장 버튼 이벤트 등록
+            document.querySelectorAll('.save-btn').forEach(btn => {
+                btn.onclick = async function() {
+                    const id = btn.getAttribute('data-id');
+                    const row = btn.closest('tr');
+                    const status = row.querySelector('.status-select').value;
+                    const memo = row.querySelector('.memo-input').value;
+                    try {
+                        const res = await fetch('/student/update', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({id, status, memo})
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                            alert('성공적으로 저장되었습니다.');
+                        } else {
+                            alert(data.error || '저장 중 에러가 발생했습니다.');
+                        }
+                    } catch (error) {
+                        alert('저장 중 에러가 발생했습니다.');
+                    }
+                };
+            });
+        }
+    }
+
+    // 부트캠프/기수별 버튼
+    async function renderBootcampButtons() {
+        const res = await fetch('/bootcamps');
+        const data = await res.json();
+        const container = document.getElementById('bootcamp-buttons');
+        container.innerHTML = '';
+        const unique = Array.from(new Set(data.map(b => b.name + '||' + b.generation)))
+            .map(str => {
+                const [name, generation] = str.split('||');
+                return {name, generation};
+            });
+        unique.forEach(b => {
+            const btn = document.createElement('button');
+            btn.className = 'bootcamp-item';
+            btn.innerText = `${b.name} / ${b.generation}`;
+            btn.onclick = function() {
+                window.selectedBootcamp = b.name;
+                window.selectedGeneration = b.generation;
+                fetchStudents();
+                fetchStatusStats();
+            };
+            const deleteBtn = document.createElement('button');
+            deleteBtn.innerText = '삭제';
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.onclick = async function(e) {
+                e.stopPropagation();
+                if (confirm(`정말로 ${b.name} ${b.generation}기 데이터를 삭제하시겠습니까?`)) {
+                    try {
+                        const res = await fetch('/bootcamp/delete', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({name: b.name, generation: b.generation})
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                            alert(data.message);
+                            renderBootcampButtons();
+                            fetchStudents();
+                            fetchStatusStats();
+                        } else {
+                            alert(data.error || '삭제 중 에러가 발생했습니다.');
+                        }
+                    } catch (error) {
+                        alert('삭제 중 에러가 발생했습니다.');
+                    }
+                }
+            };
+            btn.appendChild(deleteBtn);
+            container.appendChild(btn);
+        });
+    }
+
+    // CSV 업로드 폼 처리
+    document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        try {
+            const res = await fetch('/upload', {method: 'POST', body: formData});
+            const data = await res.json();
+            if (res.ok) {
+                document.getElementById('uploadMessage').innerText = data.message;
+                document.getElementById('uploadMessage').style.color = 'green';
+                renderBootcampButtons();
+                fetchStudents();
+                fetchStatusStats();
+            } else {
+                document.getElementById('uploadMessage').innerText = data.error || '업로드 중 에러가 발생했습니다.';
+                document.getElementById('uploadMessage').style.color = 'red';
+            }
+        } catch (error) {
+            document.getElementById('uploadMessage').innerText = '서버 연결 중 에러가 발생했습니다.';
+            document.getElementById('uploadMessage').style.color = 'red';
+        }
+    });
+
+    // 부트캠프/기수별 버튼
+    async function loadToolbar() {
+        const res = await fetch('/bootcamps');
+        const data = await res.json();
+        const toolbar = document.getElementById('toolbar');
+        toolbar.innerHTML = '';
+        // 중복 제거 및 버튼 생성
+        const unique = Array.from(new Set(data.map(b => b.name + '||' + b.generation)))
+            .map(str => {
+                const [name, generation] = str.split('||');
+                return {name, generation};
+            });
+        unique.forEach(b => {
+            const container = document.createElement('div');
+            container.className = 'bootcamp-item';
+            const btn = document.createElement('button');
+            btn.innerText = `${b.name} / ${b.generation}`;
+            btn.onclick = function() {
+                document.getElementById('bootcamp').value = b.name;
+                document.getElementById('generation').value = b.generation;
+                fetchStudents();
+                fetchStatusStats();
+            };
+            const deleteBtn = document.createElement('button');
+            deleteBtn.innerText = '삭제';
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.onclick = async function() {
+                if (confirm(`정말로 ${b.name} ${b.generation}기 데이터를 삭제하시겠습니까?`)) {
+                    try {
+                        const res = await fetch('/bootcamp/delete', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({name: b.name, generation: b.generation})
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                            alert(data.message);
+                            loadToolbar();
+                            fetchStudents();
+                            fetchStatusStats();
+                        } else {
+                            alert(data.error || '삭제 중 에러가 발생했습니다.');
+                        }
+                    } catch (error) {
+                        alert('삭제 중 에러가 발생했습니다.');
+                    }
+                }
+            };
+            container.appendChild(btn);
+            container.appendChild(deleteBtn);
+            toolbar.appendChild(container);
+        });
+    }
+
+    // 페이지 로딩 시 초기화
+    document.addEventListener('DOMContentLoaded', function() {
+        renderBootcampButtons();
+        fetchStatusStats();
+        fetchStudents();
+        fetchRecentMemos();
+    });
+
+    document.getElementById('statusFilter').addEventListener('change', fetchStudents);
+
+    async function fetchRecentMemos() {
+        const res = await fetch('/recent_memos');
+        const data = await res.json();
+        const memoList = document.getElementById('memoList');
+        memoList.innerHTML = '';
+        if (data.length === 0) {
+            memoList.innerHTML = '<li style="color:#aaa;">저장된 메모가 없습니다.</li>';
+        } else {
+            data.forEach(m => {
+                const li = document.createElement('li');
+                li.innerHTML = `<b>${m.name}</b>: ${m.memo} <span style="color:#aaa;font-size:0.9em;">(${m.updated_at})</span>`;
+                memoList.appendChild(li);
+            });
+        }
+    }
+    </script>
+</body>
+</html>
