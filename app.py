@@ -276,6 +276,20 @@ def stats_by_status():
     result = {status: count for status, count in query.all()}
     return jsonify(result)
 
+@app.route('/recent_memos', methods=['GET'])
+def recent_memos():
+    memos = (
+        Student.query
+        .filter(Student.memo != None, Student.memo != '')
+        .order_by(Student.updated_at.desc())
+        .limit(5)
+        .all()
+    )
+    return jsonify([
+        {'name': s.name, 'memo': s.memo, 'updated_at': s.updated_at.strftime('%Y-%m-%d %H:%M')}
+        for s in memos
+    ])
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()  # 테이블이 없을 때만 생성(데이터는 보존)

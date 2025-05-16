@@ -410,6 +410,11 @@
                     <h3>진행 상태</h3>
                     <canvas id="statusDonut" width="220" height="220"></canvas>
                 </div>
+                <!-- 메모 표시 카드 추가 -->
+                <div class="dashboard-card" id="memoCard">
+                    <h3>최근 메모</h3>
+                    <ul id="memoList" style="padding-left:18px;"></ul>
+                </div>
             </div>
         </div>
     </div>
@@ -717,9 +722,26 @@
         renderBootcampButtons();
         fetchStatusStats();
         fetchStudents();
+        fetchRecentMemos();
     });
 
     document.getElementById('statusFilter').addEventListener('change', fetchStudents);
+
+    async function fetchRecentMemos() {
+        const res = await fetch('/recent_memos');
+        const data = await res.json();
+        const memoList = document.getElementById('memoList');
+        memoList.innerHTML = '';
+        if (data.length === 0) {
+            memoList.innerHTML = '<li style="color:#aaa;">저장된 메모가 없습니다.</li>';
+        } else {
+            data.forEach(m => {
+                const li = document.createElement('li');
+                li.innerHTML = `<b>${m.name}</b>: ${m.memo} <span style="color:#aaa;font-size:0.9em;">(${m.updated_at})</span>`;
+                memoList.appendChild(li);
+            });
+        }
+    }
     </script>
 </body>
 </html>
