@@ -296,7 +296,7 @@
         .stat-num {
             font-size: 1.2rem;
             font-weight: 600;
-            color: #333;
+            color: #FF7710;
         }
         
         #statusDonut {
@@ -410,6 +410,11 @@
                     <h3>진행 상태</h3>
                     <canvas id="statusDonut" width="220" height="220"></canvas>
                 </div>
+                <!-- 고민이유 바 차트 카드 추가 -->
+                <div class="dashboard-card">
+                    <h3>고민중 이유</h3>
+                    <canvas id="reasonBar" width="220" height="220"></canvas>
+                </div>
                 <!-- 메모 표시 카드 추가 -->
                 <div class="dashboard-card" id="memoCard">
                     <h3>최근 메모</h3>
@@ -471,19 +476,23 @@
         // 진행 상태 도넛 차트
         const donutCtx = document.getElementById('statusDonut').getContext('2d');
         if(window.statusDonutChart) window.statusDonutChart.destroy();
+        // 상태별 색상 매핑
+        const statusColorMap = {
+            '지원중': '#B6AFFF', // 연보라
+            '고민중': '#FFE066', // 노랑
+            'HRD최종등록': '#A8FFB6', // 연두
+            '지원취소': '#FF7710', // 주황
+            '합격': '#6EC6FF' // 하늘색
+        };
+        const labels = Object.keys(data);
+        const bgColors = labels.map(l => statusColorMap[l] || '#E0E0E0');
         window.statusDonutChart = new Chart(donutCtx, {
             type: 'doughnut',
             data: {
-                labels: Object.keys(data),
+                labels: labels,
                 datasets: [{
                     data: Object.values(data),
-                    backgroundColor: [
-                        '#FF7710', // 지원중
-                        '#3F3F3F', // 합격
-                        '#FFB84D', // 고민중
-                        '#A0A0A0', // HRD최종등록
-                        '#FFFAF5'  // 기타
-                    ]
+                    backgroundColor: bgColors
                 }]
             },
             options: {
@@ -608,6 +617,7 @@
                 window.selectedGeneration = b.generation;
                 fetchStudents();
                 fetchStatusStats();
+                fetchReasonStats();
             };
             const deleteBtn = document.createElement('button');
             deleteBtn.innerText = '삭제';
@@ -663,57 +673,32 @@
         }
     });
 
-    // 부트캠프/기수별 버튼
-    async function loadToolbar() {
-        const res = await fetch('/bootcamps');
+    // 고민이유별 바 차트
+    async function fetchReasonStats() {
+        const bootcamp = window.selectedBootcamp || '';
+        const generation = window.selectedGeneration || '';
+        const res = await fetch(`/stats_by_reason?bootcamp=${encodeURIComponent(bootcamp)}&generation=${encodeURIComponent(generation)}`);
         const data = await res.json();
-        const toolbar = document.getElementById('toolbar');
-        toolbar.innerHTML = '';
-        // 중복 제거 및 버튼 생성
-        const unique = Array.from(new Set(data.map(b => b.name + '||' + b.generation)))
-            .map(str => {
-                const [name, generation] = str.split('||');
-                return {name, generation};
-            });
-        unique.forEach(b => {
-            const container = document.createElement('div');
-            container.className = 'bootcamp-item';
-            const btn = document.createElement('button');
-            btn.innerText = `${b.name} / ${b.generation}`;
-            btn.onclick = function() {
-                document.getElementById('bootcamp').value = b.name;
-                document.getElementById('generation').value = b.generation;
-                fetchStudents();
-                fetchStatusStats();
-            };
-            const deleteBtn = document.createElement('button');
-            deleteBtn.innerText = '삭제';
-            deleteBtn.className = 'delete-btn';
-            deleteBtn.onclick = async function() {
-                if (confirm(`정말로 ${b.name} ${b.generation}기 데이터를 삭제하시겠습니까?`)) {
-                    try {
-                        const res = await fetch('/bootcamp/delete', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({name: b.name, generation: b.generation})
-                        });
-                        const data = await res.json();
-                        if (res.ok) {
-                            alert(data.message);
-                            loadToolbar();
-                            fetchStudents();
-                            fetchStatusStats();
-                        } else {
-                            alert(data.error || '삭제 중 에러가 발생했습니다.');
-                        }
-                    } catch (error) {
-                        alert('삭제 중 에러가 발생했습니다.');
-                    }
+        const barCtx = document.getElementById('reasonBar').getContext('2d');
+        if(window.reasonBarChart) window.reasonBarChart.destroy();
+        window.reasonBarChart = new Chart(barCtx, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(data),
+                datasets: [{
+                    data: Object.values(data),
+                    backgroundColor: '#FFE066', // 노랑
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } }
                 }
-            };
-            container.appendChild(btn);
-            container.appendChild(deleteBtn);
-            toolbar.appendChild(container);
+            }
         });
     }
 
@@ -723,6 +708,7 @@
         fetchStatusStats();
         fetchStudents();
         fetchRecentMemos();
+        fetchReasonStats();
     });
 
     document.getElementById('statusFilter').addEventListener('change', fetchStudents);
