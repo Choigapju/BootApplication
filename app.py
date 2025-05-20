@@ -171,15 +171,15 @@ def get_students():
     for student, bootcamp in query.all():
         results.append({
             'id': student.id,
-            'bootcamp': bootcamp.name,
-            'generation': bootcamp.generation,
-            'name': student.name,
-            'email': student.email,
-            'gender': student.gender,
-            'age': student.age,
-            'phone': student.phone,
-            'status': student.status,
-            'memo': student.memo
+            'bootcamp': bootcamp.name or '',
+            'generation': bootcamp.generation or '',
+            'name': student.name or '',
+            'email': student.email or '',
+            'gender': student.gender or '',
+            'age': student.age if student.age is not None else '',
+            'phone': student.phone or '',
+            'status': student.status or '',
+            'memo': student.memo or ''
         })
     return jsonify(results)
 
@@ -283,11 +283,11 @@ def recent_memos():
         Student.query
         .filter(Student.memo != None, Student.memo != '', db.func.length(Student.memo) > 0)
         .order_by(Student.updated_at.desc())
-        .limit(5)
+        .limit(1)
         .all()
     )
     return jsonify([
-        {'name': s.name, 'memo': s.memo, 'updated_at': s.updated_at.strftime('%Y-%m-%d %H:%M')}
+        {'name': s.name or '', 'memo': s.memo or '', 'updated_at': s.updated_at.strftime('%Y-%m-%d %H:%M')}
         for s in memos
     ])
 
