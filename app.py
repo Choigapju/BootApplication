@@ -5,6 +5,7 @@ from flask_cors import CORS
 import pandas as pd
 from dotenv import load_dotenv
 import math
+from collections import Counter
 
 load_dotenv()  # .env 파일 로드
 
@@ -303,13 +304,14 @@ def recent_memos():
         query
         .filter(Student.memo != None, Student.memo != '', db.func.length(Student.memo) > 0)
         .order_by(Student.updated_at.desc())
-        .limit(5)
+        .limit(200)
         .all()
     )
-    # 각각의 메모를 개별 바로(동일 내용도 각각 1개씩)
+    # 같은 내용의 메모는 count를 합산
+    memo_counter = Counter((s.memo or '').strip() for s in memos if s.memo)
     result = [
-        {'memo': s.memo or '', 'count': 1, 'updated_at': s.updated_at.strftime('%Y-%m-%d %H:%M')}
-        for s in memos
+        {'memo': memo, 'count': count}
+        for memo, count in memo_counter.items()
     ]
     return jsonify(result)
 
