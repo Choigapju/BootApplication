@@ -281,7 +281,7 @@ def stats_by_status():
 def recent_memos():
     memos = (
         Student.query
-        .filter(Student.memo != None, Student.memo != '')
+        .filter(Student.memo != None, Student.memo != '', db.func.length(Student.memo) > 0)
         .order_by(Student.updated_at.desc())
         .limit(5)
         .all()

@@ -410,9 +410,9 @@
                     <h3>진행 상태</h3>
                     <canvas id="statusDonut" width="220" height="220"></canvas>
                 </div>
-                <!-- 고민이유 바 차트 카드 추가 -->
+                <!-- 고민이유 바 차트 카드(제목을 '최근 메모'로 변경) -->
                 <div class="dashboard-card">
-                    <h3>고민중 이유</h3>
+                    <h3>최근 메모</h3>
                     <canvas id="reasonBar" width="220" height="220"></canvas>
                 </div>
                 <!-- 메모 표시 카드 추가 -->
@@ -536,7 +536,13 @@
         const status = document.getElementById('statusFilter').value || '';
         let url = `/students?bootcamp=${encodeURIComponent(bootcamp)}&generation=${encodeURIComponent(generation)}&status=${encodeURIComponent(status)}`;
         const res = await fetch(url);
-        const data = await res.json();
+        let data = [];
+        try {
+            data = await res.json();
+            if (!Array.isArray(data)) data = [];
+        } catch (e) {
+            data = [];
+        }
         const tbody = document.querySelector('#studentsTable tbody');
         tbody.innerHTML = '';
         if (data.length === 0) {
@@ -546,13 +552,13 @@
             data.forEach(s => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${s.bootcamp}</td>
-                    <td>${s.generation}</td>
-                    <td>${s.name}</td>
-                    <td>${s.email}</td>
-                    <td>${s.gender}</td>
-                    <td>${s.age}</td>
-                    <td>${s.phone}</td>
+                    <td>${s.bootcamp || ''}</td>
+                    <td>${s.generation || ''}</td>
+                    <td>${s.name || ''}</td>
+                    <td>${s.email || ''}</td>
+                    <td>${s.gender || ''}</td>
+                    <td>${s.age || ''}</td>
+                    <td>${s.phone || ''}</td>
                     <td>
                         <select class="status-select" data-id="${s.id}">
                             ${STATUS_OPTIONS.map(option =>
@@ -673,20 +679,21 @@
         }
     });
 
-    // 고민이유별 바 차트
+    // 최근 메모 바 차트 (이전 고민이유 바 차트 함수 대체)
     async function fetchReasonStats() {
-        const bootcamp = window.selectedBootcamp || '';
-        const generation = window.selectedGeneration || '';
-        const res = await fetch(`/stats_by_reason?bootcamp=${encodeURIComponent(bootcamp)}&generation=${encodeURIComponent(generation)}`);
+        const res = await fetch('/recent_memos');
         const data = await res.json();
         const barCtx = document.getElementById('reasonBar').getContext('2d');
         if(window.reasonBarChart) window.reasonBarChart.destroy();
+        // 최근 메모 5건: 이름을 라벨, 메모 길이를 값으로
+        const labels = data.map(m => m.name);
+        const values = data.map(m => m.memo ? m.memo.length : 0);
         window.reasonBarChart = new Chart(barCtx, {
             type: 'bar',
             data: {
-                labels: Object.keys(data),
+                labels: labels,
                 datasets: [{
-                    data: Object.values(data),
+                    data: values,
                     backgroundColor: '#FFE066', // 노랑
                     borderRadius: 8
                 }]
