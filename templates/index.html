@@ -686,7 +686,7 @@
         }
     });
 
-    // 최근 메모 바 차트 (부트캠프/기수별)
+    // 최근 메모 바 차트 (부트캠프/기수별, 여러 메모)
     async function fetchReasonStats() {
         const bootcamp = window.selectedBootcamp || '';
         const generation = window.selectedGeneration || '';
@@ -700,9 +700,9 @@
         }
         const barCtx = document.getElementById('reasonBar').getContext('2d');
         if(window.reasonBarChart) window.reasonBarChart.destroy();
-        // 최근 메모 1건: 메모 내용을 라벨로, 메모 길이를 값으로
+        // 여러 메모: 메모 내용을 라벨로, count(1)을 값으로
         const labels = data.map(m => (m.memo || '').slice(0, 20));
-        const values = data.map(m => m.memo ? m.memo.length : 0);
+        const values = data.map(m => m.count || 1);
         window.reasonBarChart = new Chart(barCtx, {
             type: 'bar',
             data: {

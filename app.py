@@ -287,7 +287,6 @@ def stats_by_status():
 def recent_memos():
     bootcamp = request.args.get('bootcamp')
     generation = request.args.get('generation')
-    # 빈 문자열도 None처럼 처리
     bootcamp = bootcamp if bootcamp else None
     generation = generation if generation else None
 
@@ -304,11 +303,12 @@ def recent_memos():
         query
         .filter(Student.memo != None, Student.memo != '', db.func.length(Student.memo) > 0)
         .order_by(Student.updated_at.desc())
-        .limit(1)
+        .limit(5)
         .all()
     )
+    # 각각의 메모를 개별 바로(동일 내용도 각각 1개씩)
     result = [
-        {'name': s.name or '', 'memo': s.memo or '', 'updated_at': s.updated_at.strftime('%Y-%m-%d %H:%M')}
+        {'memo': s.memo or '', 'count': 1, 'updated_at': s.updated_at.strftime('%Y-%m-%d %H:%M')}
         for s in memos
     ]
     return jsonify(result)
