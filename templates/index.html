@@ -432,19 +432,21 @@
         <h2>지원자 조회</h2>
         <div id="bootcamp-buttons" style="margin-bottom:18px; display:flex; gap:10px; flex-wrap:wrap;"></div>
         <div class="table-toolbar" style="justify-content:space-between; align-items:flex-end; flex-wrap:wrap;">
-            <select id="statusFilter" style="margin-right:12px;">
-                <option value="">전체 상태</option>
-                <option value="지원중">지원중</option>
-                <option value="합격">합격</option>
-                <option value="고민중">고민중</option>
-                <option value="HRD최종등록">HRD최종등록</option>
-                <option value="지원취소">지원취소</option>
-            </select>
+            <div style="display:flex; align-items:center; gap:10px; flex:1;">
+                <select id="statusFilter" style="margin-right:12px;">
+                    <option value="">전체 상태</option>
+                    <option value="지원중">지원중</option>
+                    <option value="합격">합격</option>
+                    <option value="고민중">고민중</option>
+                    <option value="HRD최종등록">HRD최종등록</option>
+                    <option value="지원취소">지원취소</option>
+                </select>
+                <input type="text" id="searchInput" placeholder="이름 또는 전화번호 검색..." style="flex:0 0 200px;">
+            </div>
             <form class="upload-form" id="uploadForm" enctype="multipart/form-data" style="margin:0;">
                 <input type="file" name="file" required />
                 <button type="submit"><span style="font-size:1.2em;">⬆️</span> 지원 데이터 업로드</button>
             </form>
-            <input type="text" id="searchInput" placeholder="이름 또는 전화번호 검색..." style="flex:0 0 200px;">
         </div>
         <div id="uploadMessage" style="margin-bottom:10px;"></div>
         <div class="table-wrap">
