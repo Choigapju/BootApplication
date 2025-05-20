@@ -415,11 +415,6 @@
                     <h3>최근 메모</h3>
                     <canvas id="reasonBar" width="220" height="220"></canvas>
                 </div>
-                <!-- 메모 표시 카드 추가 -->
-                <div class="dashboard-card" id="memoCard">
-                    <h3>최근 메모</h3>
-                    <ul id="memoList" style="padding-left:18px;"></ul>
-                </div>
             </div>
         </div>
     </div>
@@ -679,13 +674,21 @@
         }
     });
 
-    // 최근 메모 바 차트 (이전 고민이유 바 차트 함수 대체)
+    // 최근 메모 바 차트 (부트캠프/기수별)
     async function fetchReasonStats() {
-        const res = await fetch('/recent_memos');
-        const data = await res.json();
+        const bootcamp = window.selectedBootcamp || '';
+        const generation = window.selectedGeneration || '';
+        const res = await fetch(`/recent_memos?bootcamp=${encodeURIComponent(bootcamp)}&generation=${encodeURIComponent(generation)}`);
+        let data = [];
+        try {
+            data = await res.json();
+            if (!Array.isArray(data)) data = [];
+        } catch (e) {
+            data = [];
+        }
         const barCtx = document.getElementById('reasonBar').getContext('2d');
         if(window.reasonBarChart) window.reasonBarChart.destroy();
-        // 최근 메모 5건: 이름을 라벨, 메모 길이를 값으로
+        // 최근 메모 1건: 이름을 라벨, 메모 길이를 값으로
         const labels = data.map(m => m.name);
         const values = data.map(m => m.memo ? m.memo.length : 0);
         window.reasonBarChart = new Chart(barCtx, {
@@ -714,27 +717,10 @@
         renderBootcampButtons();
         fetchStatusStats();
         fetchStudents();
-        fetchRecentMemos();
         fetchReasonStats();
     });
 
     document.getElementById('statusFilter').addEventListener('change', fetchStudents);
-
-    async function fetchRecentMemos() {
-        const res = await fetch('/recent_memos');
-        const data = await res.json();
-        const memoList = document.getElementById('memoList');
-        memoList.innerHTML = '';
-        if (data.length === 0) {
-            memoList.innerHTML = '<li style="color:#aaa;">저장된 메모가 없습니다.</li>';
-        } else {
-            data.forEach(m => {
-                const li = document.createElement('li');
-                li.innerHTML = `<b>${m.name}</b>: ${m.memo} <span style="color:#aaa;font-size:0.9em;">(${m.updated_at})</span>`;
-                memoList.appendChild(li);
-            });
-        }
-    }
     </script>
 </body>
 </html>

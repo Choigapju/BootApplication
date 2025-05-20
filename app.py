@@ -279,8 +279,17 @@ def stats_by_status():
 
 @app.route('/recent_memos', methods=['GET'])
 def recent_memos():
+    bootcamp = request.args.get('bootcamp')
+    generation = request.args.get('generation')
+    query = Student.query
+    if bootcamp or generation:
+        query = query.join(Bootcamp)
+        if bootcamp:
+            query = query.filter(Bootcamp.name == bootcamp)
+        if generation:
+            query = query.filter(Bootcamp.generation == generation)
     memos = (
-        Student.query
+        query
         .filter(Student.memo != None, Student.memo != '', db.func.length(Student.memo) > 0)
         .order_by(Student.updated_at.desc())
         .limit(1)
