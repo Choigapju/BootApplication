@@ -376,7 +376,9 @@
 </head>
 <body>
     <div class="main-header">
-        <span>KDT 교육 지원자 관리 시스템</span>
+        <a href="#" id="homeTitle" style="color:inherit;text-decoration:none;cursor:pointer;">
+            <span>KDT 교육 지원자 관리 시스템</span>
+        </a>
     </div>
     <div class="section">
         <h2>통계</h2>
@@ -537,7 +539,9 @@
         const bootcamp = window.selectedBootcamp || '';
         const generation = window.selectedGeneration || '';
         const status = document.getElementById('statusFilter').value || '';
+        const search = document.getElementById('searchInput')?.value?.trim() || '';
         let url = `/students?bootcamp=${encodeURIComponent(bootcamp)}&generation=${encodeURIComponent(generation)}&status=${encodeURIComponent(status)}`;
+        if (search) url += `&search=${encodeURIComponent(search)}`;
         const res = await fetch(url);
         let data = [];
         try {
@@ -696,8 +700,8 @@
         }
         const barCtx = document.getElementById('reasonBar').getContext('2d');
         if(window.reasonBarChart) window.reasonBarChart.destroy();
-        // 최근 메모 1건: 이름을 라벨, 메모 길이를 값으로
-        const labels = data.map(m => m.name);
+        // 최근 메모 1건: 메모 내용을 라벨로, 메모 길이를 값으로
+        const labels = data.map(m => (m.memo || '').slice(0, 20));
         const values = data.map(m => m.memo ? m.memo.length : 0);
         window.reasonBarChart = new Chart(barCtx, {
             type: 'bar',
@@ -726,9 +730,22 @@
         fetchStatusStats();
         fetchStudents();
         fetchReasonStats();
+        // 홈 타이틀 클릭 시 전체 초기화
+        document.getElementById('homeTitle').onclick = function(e) {
+            e.preventDefault();
+            window.selectedBootcamp = '';
+            window.selectedGeneration = '';
+            // 상태 필터도 전체로 초기화
+            const statusFilter = document.getElementById('statusFilter');
+            if (statusFilter) statusFilter.value = '';
+            fetchStudents();
+            fetchStatusStats();
+            fetchReasonStats();
+        };
     });
 
     document.getElementById('statusFilter').addEventListener('change', fetchStudents);
+    document.getElementById('searchInput').addEventListener('input', fetchStudents);
     </script>
 </body>
 </html>

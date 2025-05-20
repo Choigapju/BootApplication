@@ -160,6 +160,7 @@ def get_students():
     bootcamp = request.args.get('bootcamp', '')
     generation = request.args.get('generation', '')
     status = request.args.get('status', '')
+    search = request.args.get('search', '').strip()
     query = db.session.query(Student, Bootcamp).join(Bootcamp)
     if bootcamp:
         query = query.filter(Bootcamp.name == bootcamp)
@@ -167,6 +168,11 @@ def get_students():
         query = query.filter(Bootcamp.generation == generation)
     if status:
         query = query.filter(Student.status == status)
+    if search:
+        like = f"%{search}%"
+        query = query.filter(
+            db.or_(Student.name.ilike(like), Student.phone.ilike(like), Student.email.ilike(like))
+        )
     results = []
     for student, bootcamp in query.all():
         results.append({
