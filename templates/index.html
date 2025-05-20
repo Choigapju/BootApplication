@@ -599,6 +599,7 @@
                         const data = await res.json();
                         if (res.ok) {
                             alert('성공적으로 저장되었습니다.');
+                            fetchStudents();
                         } else {
                             alert(data.error || '저장 중 에러가 발생했습니다.');
                         }
