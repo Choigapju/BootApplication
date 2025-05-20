@@ -281,13 +281,14 @@ def stats_by_status():
 def recent_memos():
     bootcamp = request.args.get('bootcamp')
     generation = request.args.get('generation')
-    query = Student.query
     if bootcamp or generation:
-        query = query.join(Bootcamp)
+        query = Student.query.join(Bootcamp)
         if bootcamp:
             query = query.filter(Bootcamp.name == bootcamp)
         if generation:
             query = query.filter(Bootcamp.generation == generation)
+    else:
+        query = Student.query
     memos = (
         query
         .filter(Student.memo != None, Student.memo != '', db.func.length(Student.memo) > 0)
@@ -295,10 +296,11 @@ def recent_memos():
         .limit(1)
         .all()
     )
-    return jsonify([
+    result = [
         {'name': s.name or '', 'memo': s.memo or '', 'updated_at': s.updated_at.strftime('%Y-%m-%d %H:%M')}
         for s in memos
-    ])
+    ]
+    return jsonify(result)
 
 @app.route('/stats_by_reason', methods=['GET'])
 def stats_by_reason():
