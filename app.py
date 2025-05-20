@@ -281,6 +281,10 @@ def stats_by_status():
 def recent_memos():
     bootcamp = request.args.get('bootcamp')
     generation = request.args.get('generation')
+    # 빈 문자열도 None처럼 처리
+    bootcamp = bootcamp if bootcamp else None
+    generation = generation if generation else None
+
     if bootcamp or generation:
         query = Student.query.join(Bootcamp)
         if bootcamp:
@@ -289,6 +293,7 @@ def recent_memos():
             query = query.filter(Bootcamp.generation == generation)
     else:
         query = Student.query
+
     memos = (
         query
         .filter(Student.memo != None, Student.memo != '', db.func.length(Student.memo) > 0)
