@@ -713,7 +713,9 @@
                 datasets: [{
                     data: values,
                     backgroundColor: '#FFE066', // 노랑
-                    borderRadius: 8
+                    borderRadius: 8,
+                    barPercentage: 0.7,
+                    categoryPercentage: 0.7
                 }]
             },
             options: {
@@ -721,7 +723,23 @@
                     legend: { display: false }
                 },
                 scales: {
-                    y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                    x: {
+                        ticks: {
+                            maxRotation: 0,
+                            minRotation: 0
+                        }
+                    }
+                },
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
                 }
             }
         });

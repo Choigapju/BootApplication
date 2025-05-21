@@ -74,7 +74,7 @@ def upload_csv():
                     'android' : '안드로이드 부트캠프',
                     'ios' : '아이폰 앱 개발 부트캠프',
                     'ugm' : '유니티 부트캠프',
-                    'data' : '데이터 분석 부트캠프',
+                    'dataanalysis' : '데이터 분석 부트캠프',
                     'cloud' : '클라우드 부트캠프',
                 }
                 bootcamp_name = bootcamp_mapping.get(bootcamp_type, f'{bootcamp_type} 부트캠프')
