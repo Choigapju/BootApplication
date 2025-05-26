@@ -347,5 +347,5 @@ def stats_by_reason():
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()  # 테이블이 없을 때만 생성(데이터는 보존)
-    port = int(os.getenv('PORT', 10000))
+    port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
