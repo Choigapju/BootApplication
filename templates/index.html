@@ -113,19 +113,22 @@
             color: #fff;
         }
         .table-wrap {
+            width: 100vw;
+            max-width: 100vw;
             overflow-x: auto;
-            width: 100%;
+            margin: 0 -3vw; /* 좌우 여백 없애기 */
         }
         table {
-            border-collapse: collapse;
             width: 100%;
             min-width: 900px;
             background: var(--main-white);
             margin-bottom: 16px;
+            table-layout: auto;
         }
         th, td {
-            padding: 10px 14px;
+            padding: 10px 8px;
             text-align: center;
+            white-space: nowrap;
         }
         th {
             background: var(--main-bg);
@@ -186,13 +189,19 @@
         @media (max-width: 900px) {
             .section { padding: 12px 0.5vw; }
             table { min-width: 600px; }
+            th, td { font-size: 0.95rem; padding: 8px 4px; }
         }
         @media (max-width: 700px) {
             .section { padding: 8px 0; }
             .header-title { font-size: 1.1rem; }
-            th, td { font-size: 0.92rem; }
+            th, td { font-size: 0.9rem; padding: 6px 2px; }
             table { min-width: 400px; }
             .memo-input { width: 100px; }
+            th:nth-child(4), td:nth-child(4), /* 이메일 */
+            th:nth-child(9), td:nth-child(9), /* 메모 */
+            th:nth-child(11), td:nth-child(11) /* 고민이유 */ {
+                display: none;
+            }
         }
         .toolbar-row {
             display: flex;
