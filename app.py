@@ -254,6 +254,7 @@ def update_student():
     status = data.get('status')
     memo = data.get('memo')
     card_owned = data.get('card_owned')
+    considering_reason = data.get('considering_reason')
 
     try:
         student = Student.query.get(student_id)
@@ -266,6 +267,8 @@ def update_student():
             student.memo = memo
         if card_owned is not None:
             student.card_owned = card_owned
+        if considering_reason is not None:
+            student.considering_reason = considering_reason
 
         db.session.commit()
         return jsonify({'message': '성공적으로 업데이트되었습니다.'}), 200
