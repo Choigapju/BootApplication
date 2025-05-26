@@ -462,6 +462,7 @@
                         <th>전화번호</th>
                         <th>상태</th>
                         <th>메모</th>
+                        <th>내배카 보유</th>
                         <th>액션</th>
                     </tr>
                 </thead>
@@ -578,6 +579,7 @@
                     <td>
                         <input type="text" class="memo-input" data-id="${s.id}" value="${s.memo || ''}" placeholder="메모 입력...">
                     </td>
+                    <td>${s.card_owned || ''}</td>
                     <td>
                         <button class="save-btn" data-id="${s.id}">저장</button>
                     </td>

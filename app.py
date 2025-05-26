@@ -40,6 +40,7 @@ class Student(db.Model):
     created_at = db.Column(db.DateTime, default=db.func.now())  # 생성 시간
     updated_at = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())  # 수정 시간
     considering_reason = db.Column(db.String(255))  # 고민이유 추가
+    card_owned = db.Column(db.String(10))  # 내배카 보유 여부
 
 def safe_str(val):
     # NaN, None, float('nan') 모두 ''로 변환
@@ -141,7 +142,8 @@ def upload_csv():
                 gender=row.get('성별', ''),
                 age=age,
                 phone=phone_str,
-                bootcamp_id=bootcamp.id
+                bootcamp_id=bootcamp.id,
+                card_owned=row.get('내배카 보유', '')
             )
             new_students.append(student)
             existing.add((email, phone_str))  # 중복 방지
@@ -186,7 +188,9 @@ def get_students():
             'age': student.age if student.age is not None else '',
             'phone': student.phone or '',
             'status': student.status or '',
-            'memo': student.memo or ''
+            'memo': student.memo or '',
+            'card_owned': student.card_owned or '',
+            'card_owned': student.card_owned or ''
         })
     return jsonify(results)
 
