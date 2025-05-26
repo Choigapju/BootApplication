@@ -190,7 +190,7 @@ def get_students():
             'status': student.status or '',
             'memo': student.memo or '',
             'card_owned': student.card_owned or '',
-            'card_owned': student.card_owned or ''
+            'considering_reason': student.considering_reason or ''
         })
     return jsonify(results)
 
