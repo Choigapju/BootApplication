@@ -579,7 +579,13 @@
                     <td>
                         <input type="text" class="memo-input" data-id="${s.id}" value="${s.memo || ''}" placeholder="메모 입력...">
                     </td>
-                    <td>${s.card_owned || ''}</td>
+                    <td>
+                        <select class="car-select" data-id="${s.id}">
+                            <option value="yes" ${s.card_owned === 'yes' ? 'selected' : ''}>보유중</option>
+                            <option value="no" ${s.card_owned === 'no' ? 'selected' : ''}>미보유</option>
+                            <option value="unknown" ${!s.card_owned || s.card_owned === 'unknown' ? 'selected' : ''}>모름</option>
+                        </select>
+                    </td>
                     <td>
                         <button class="save-btn" data-id="${s.id}">저장</button>
                     </td>
@@ -594,11 +600,12 @@
                     const row = btn.closest('tr');
                     const status = row.querySelector('.status-select').value;
                     const memo = row.querySelector('.memo-input').value;
+                    const card_owned = row.querySelector('.car-select').value;
                     try {
                         const res = await fetch('/student/update', {
                             method: 'POST',
                             headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({id, status, memo})
+                            body: JSON.stringify({id, status, memo, card_owned})
                         });
                         const data = await res.json();
                         if (res.ok) {
@@ -769,6 +776,24 @@
 
     document.getElementById('statusFilter').addEventListener('change', fetchStudents);
     document.getElementById('searchInput').addEventListener('input', fetchStudents);
+
+    document.querySelectorAll('.car-select').forEach(sel => {
+        sel.onchange = async function() {
+            const id = sel.getAttribute('data-id');
+            const card_owned = sel.value;
+            try {
+                const res = await fetch('/student/update', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id, card_owned})
+                });
+                const data = await res.json();
+                if (!res.ok) alert(data.error || '저장 중 에러가 발생했습니다.');
+            } catch (error) {
+                alert('저장 중 에러가 발생했습니다.');
+            }
+        };
+    });
     </script>
 </body>
 </html>

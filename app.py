@@ -253,17 +253,20 @@ def update_student():
     student_id = data.get('id')
     status = data.get('status')
     memo = data.get('memo')
-    
+    card_owned = data.get('card_owned')
+
     try:
         student = Student.query.get(student_id)
         if not student:
             return jsonify({'error': '지원자를 찾을 수 없습니다.'}), 404
-            
+
         if status:
             student.status = status
-        if memo is not None:  # 빈 문자열도 허용
+        if memo is not None:
             student.memo = memo
-            
+        if card_owned is not None:
+            student.card_owned = card_owned
+
         db.session.commit()
         return jsonify({'message': '성공적으로 업데이트되었습니다.'}), 200
     except Exception as e:
