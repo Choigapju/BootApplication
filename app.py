@@ -268,7 +268,11 @@ def update_student():
         if card_owned is not None:
             student.card_owned = card_owned
         if considering_reason is not None:
-            student.considering_reason = considering_reason
+            # 빈 문자열 또는 '선택'이면 NULL로 저장
+            if considering_reason.strip() == '' or considering_reason == '선택':
+                student.considering_reason = None
+            else:
+                student.considering_reason = considering_reason
 
         db.session.commit()
         return jsonify({'message': '성공적으로 업데이트되었습니다.'}), 200
@@ -334,8 +338,10 @@ def stats_by_reason():
         query = query.filter(Bootcamp.name == bootcamp)
     if generation:
         query = query.filter(Bootcamp.generation == generation)
+    # 고민이유가 NULL 또는 빈 문자열이 아닌 것만 카운트
+    query = query.filter(Student.considering_reason != None, Student.considering_reason != '')
     query = query.group_by(Student.considering_reason)
-    result = {reason if reason else '기타': count for reason, count in query.all()}
+    result = {reason: count for reason, count in query.all()}
     return jsonify(result)
 
 if __name__ == '__main__':
