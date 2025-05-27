@@ -34,7 +34,7 @@ class Student(db.Model):
     gender = db.Column(db.String(10))
     age = db.Column(db.Integer)
     phone = db.Column(db.String(30))
-    status = db.Column(db.String(20), default='지원중')  # 상태 필드 추가
+    status = db.Column(db.String(20), default='대상아님')
     memo = db.Column(db.Text)  # 메모 필드 추가
     bootcamp_id = db.Column(db.Integer, db.ForeignKey('bootcamps.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=db.func.now())  # 생성 시간
@@ -136,6 +136,15 @@ def upload_csv():
                 age = current_year - birth_year
             except:
                 age = None
+            status_map = {
+                '대상아님': '대상아님',
+                '검토전': '검토전',
+                '합격': '합격',
+                '고민중': '고민중',
+                'HRD최종등록': 'HRD최종등록',
+                '지원취소': '지원취소'
+            }
+            status_val = status_map.get(str(row.get('합불상태', '')).strip(), '대상아님')
             student = Student(
                 name=row['가입 이름'],
                 email=email,
@@ -143,7 +152,8 @@ def upload_csv():
                 age=age,
                 phone=phone_str,
                 bootcamp_id=bootcamp.id,
-                card_owned=row.get('내배카 보유', '')
+                card_owned=row.get('내배카 보유', ''),
+                status=status_val
             )
             new_students.append(student)
             existing.add((email, phone_str))  # 중복 방지

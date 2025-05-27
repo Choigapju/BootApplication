@@ -462,7 +462,8 @@
             <div style="display:flex; align-items:center; gap:10px; flex:1;">
                 <select id="statusFilter" style="margin-right:12px;">
                     <option value="">전체 상태</option>
-                    <option value="지원중">지원중</option>
+                    <option value="대상아님">대상아님</option>
+                    <option value="검토전">검토전</option>
                     <option value="합격">합격</option>
                     <option value="고민중">고민중</option>
                     <option value="HRD최종등록">HRD최종등록</option>
@@ -514,11 +515,12 @@
         if(window.statusDonutChart) window.statusDonutChart.destroy();
         // 상태별 색상 매핑
         const statusColorMap = {
-            '지원중': '#B6AFFF', // 연보라
-            '고민중': '#FFE066', // 노랑
-            'HRD최종등록': '#A8FFB6', // 연두
-            '지원취소': '#FF7710', // 주황
-            '합격': '#6EC6FF' // 하늘색
+            '대상아님': '#B6AFFF',
+            '검토전': '#B6FFD6',
+            '합격': '#6EC6FF',
+            '고민중': '#FFE066',
+            'HRD최종등록': '#A8FFB6',
+            '지원취소': '#FF7710'
         };
         const labels = Object.keys(data);
         const bgColors = labels.map(l => statusColorMap[l] || '#E0E0E0');
@@ -540,7 +542,8 @@
 
         // 현황 카드 숫자 자동 반영
         const statusMap = {
-            '지원중': 'stat-apply',
+            '대상아님': 'stat-apply',
+            '검토전': 'stat-review',
             '합격': 'stat-pass',
             '고민중': 'stat-pending',
             'HRD최종등록': 'stat-hrd',
@@ -586,7 +589,7 @@
         if (data.length === 0) {
             tbody.innerHTML = `<tr><td colspan="10" class="no-data">지원자 데이터가 없습니다</td></tr>`;
         } else {
-            const STATUS_OPTIONS = ['지원중', '합격', '고민중', 'HRD최종등록', '지원취소'];
+            const STATUS_OPTIONS = ['대상아님', '검토전', '합격', '고민중', 'HRD최종등록', '지원취소'];
             data.forEach(s => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
