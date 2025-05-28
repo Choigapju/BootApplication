@@ -135,7 +135,12 @@ def upload_csv():
         new_students = []
         for _, row in df.iterrows():
             email = str(row.get('가입 이메일', '')).strip()
-            phone_str = str(row.get('가입 연락처', '')).zfill(11)
+            phone_raw = str(row.get('가입 연락처', '')).strip()
+            # 전화번호 010 보정
+            phone_str = phone_raw
+            if len(phone_str) == 10 and phone_str.startswith('10'):
+                phone_str = '0' + phone_str
+            phone_str = phone_str.zfill(11)
             key = (email, phone_str)
             try:
                 birth_year = int(row['생년월일'].split('-')[0])
@@ -149,19 +154,15 @@ def upload_csv():
             existing = existing_students.get(key)
             if existing:
                 old_status = existing.status
-                # 조건 1: 기존 '대상아님' → 새 '검토전'
                 if old_status == '대상아님' and status_val == '검토전':
                     db.session.delete(existing)
-                # 조건 2: 기존 '검토전' 또는 '합격' → 새 '지원취소'
                 elif old_status in ['검토전', '합격'] and status_val == '지원취소':
                     db.session.delete(existing)
-                # 조건 3: 기존 '검토전' → 새 '합격'
                 elif old_status == '검토전' and status_val == '합격':
                     db.session.delete(existing)
                 else:
-                    # 그 외에는 중복 저장하지 않음
                     continue
-                db.session.flush()  # 삭제 즉시 반영
+                db.session.flush()
             # 신규 또는 삭제 후 추가
             student = Student(
                 name=row['가입 이름'],
@@ -174,6 +175,8 @@ def upload_csv():
                 status=status_val
             )
             db.session.add(student)
+            # 새로 추가한 지원자도 existing_students에 즉시 반영
+            existing_students[key] = student
         db.session.commit()
         return jsonify({'message': '업로드 및 저장 완료'})
     except Exception as e:
