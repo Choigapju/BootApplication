@@ -118,33 +118,51 @@ def upload_csv():
             db.session.add(bootcamp)
             db.session.commit()
 
-        # 이미 등록된 지원자 (email, phone) 쌍 미리 조회
-        existing = set(
-            (s.email, s.phone)
-            for s in Student.query.filter_by(bootcamp_id=bootcamp.id).all()
-        )
+        # 이미 등록된 지원자 (email, phone) 쌍 미리 조회 (id, status 포함)
+        existing_students = {}
+        for s in Student.query.filter_by(bootcamp_id=bootcamp.id).all():
+            key = (s.email, s.phone)
+            existing_students[key] = s
 
+        status_map = {
+            '대상아님': '대상아님',
+            '검토전': '검토전',
+            '합격': '합격',
+            '고민중': '고민중',
+            'HRD최종등록': 'HRD최종등록',
+            '지원취소': '지원취소'
+        }
         new_students = []
         for _, row in df.iterrows():
             email = str(row.get('가입 이메일', '')).strip()
             phone_str = str(row.get('가입 연락처', '')).zfill(11)
-            if (email, phone_str) in existing:
-                continue
+            key = (email, phone_str)
             try:
                 birth_year = int(row['생년월일'].split('-')[0])
                 current_year = 2024
                 age = current_year - birth_year
             except:
                 age = None
-            status_map = {
-                '대상아님': '대상아님',
-                '검토전': '검토전',
-                '합격': '합격',
-                '고민중': '고민중',
-                'HRD최종등록': 'HRD최종등록',
-                '지원취소': '지원취소'
-            }
             status_val = status_map.get(str(row.get('합불상태', '')).strip(), '대상아님')
+
+            # 중복 지원자 처리
+            existing = existing_students.get(key)
+            if existing:
+                old_status = existing.status
+                # 조건 1: 기존 '대상아님' → 새 '검토전'
+                if old_status == '대상아님' and status_val == '검토전':
+                    db.session.delete(existing)
+                # 조건 2: 기존 '검토전' 또는 '합격' → 새 '지원취소'
+                elif old_status in ['검토전', '합격'] and status_val == '지원취소':
+                    db.session.delete(existing)
+                # 조건 3: 기존 '검토전' → 새 '합격'
+                elif old_status == '검토전' and status_val == '합격':
+                    db.session.delete(existing)
+                else:
+                    # 그 외에는 중복 저장하지 않음
+                    continue
+                db.session.flush()  # 삭제 즉시 반영
+            # 신규 또는 삭제 후 추가
             student = Student(
                 name=row['가입 이름'],
                 email=email,
@@ -155,11 +173,7 @@ def upload_csv():
                 card_owned=row.get('내배카 보유', ''),
                 status=status_val
             )
-            new_students.append(student)
-            existing.add((email, phone_str))  # 중복 방지
-
-        if new_students:
-            db.session.bulk_save_objects(new_students)
+            db.session.add(student)
         db.session.commit()
         return jsonify({'message': '업로드 및 저장 완료'})
     except Exception as e:
