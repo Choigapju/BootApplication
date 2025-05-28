@@ -127,7 +127,7 @@ def upload_csv():
         new_students = []
         for _, row in df.iterrows():
             email = str(row.get('가입 이메일', '')).strip()
-            phone_str = str(row.get('가입 연락처', '')).strip()
+            phone_str = str(row.get('가입 연락처', '')).zfill(11)
             if (email, phone_str) in existing:
                 continue
             try:

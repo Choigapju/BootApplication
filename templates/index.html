@@ -63,6 +63,8 @@
             background: var(--main-bg);
             color: var(--main-dark);
             font-size: 1rem;
+            padding-right: 32px;
+            background-position: right 18px center;
         }
         input[type="file"] {
             padding: 6px 0;
@@ -413,32 +415,18 @@
             <div class="dashboard-row">
                 <!-- 현황 카드 -->
                 <div class="dashboard-card">
-                    <h3>현황</h3>
+                    <div style="display:flex; align-items:center; justify-content:space-between;">
+                        <h3>현황</h3>
+                        <span class="stat-num" id="stat-total" style="font-size:2.2rem; margin-left:16px;">0명</span>
+                    </div>
                     <div class="stat-cards">
-                        <div class="stat-card">
-                            <div>전체</div>
-                            <div class="stat-num" id="stat-total">0명</div>
-                        </div>
-                        <div class="stat-card">
-                            <div>지원중</div>
-                            <div class="stat-num" id="stat-apply">0명</div>
-                        </div>
-                        <div class="stat-card">
-                            <div>합격 처리</div>
-                            <div class="stat-num" id="stat-pass">0명</div>
-                        </div>
-                        <div class="stat-card">
-                            <div>고민중</div>
-                            <div class="stat-num" id="stat-pending">0명</div>
-                        </div>
-                        <div class="stat-card">
-                            <div>HRD 최종 등록</div>
-                            <div class="stat-num" id="stat-hrd">0명</div>
-                        </div>
-                        <div class="stat-card">
-                            <div>수강 취소</div>
-                            <div class="stat-num" id="stat-cancel">0명</div>
-                        </div>
+                        <div class="stat-card"><div>전체</div><div class="stat-num" id="stat-apply">0명</div></div>
+                        <div class="stat-card"><div>지원중</div><div class="stat-num" id="stat-apply">0명</div></div>
+                        <div class="stat-card"><div>검토전</div><div class="stat-num" id="stat-review">0명</div></div>
+                        <div class="stat-card"><div>합격 처리</div><div class="stat-num" id="stat-pass">0명</div></div>
+                        <div class="stat-card"><div>고민중</div><div class="stat-num" id="stat-pending">0명</div></div>
+                        <div class="stat-card"><div>HRD 최종 등록</div><div class="stat-num" id="stat-hrd">0명</div></div>
+                        <div class="stat-card"><div>수강 취소</div><div class="stat-num" id="stat-cancel">0명</div></div>
                     </div>
                 </div>
                 
@@ -457,6 +445,10 @@
     </div>
     <div class="section">
         <h2>지원자 조회</h2>
+        <div style="display:flex; gap:10px; margin-bottom:18px;">
+            <select id="bootcampSelect"></select>
+            <select id="generationSelect"></select>
+        </div>
         <div id="bootcamp-buttons" style="margin-bottom:18px; display:flex; gap:10px; flex-wrap:wrap;"></div>
         <div class="table-toolbar" style="justify-content:space-between; align-items:flex-end; flex-wrap:wrap;">
             <div style="display:flex; align-items:center; gap:10px; flex:1;">
@@ -472,8 +464,8 @@
                 <input type="text" id="searchInput" placeholder="이름 또는 전화번호 검색..." style="flex:0 0 200px;">
             </div>
             <form class="upload-form" id="uploadForm" enctype="multipart/form-data" style="margin:0;">
-                <input type="file" name="file" required />
-                <button type="submit"><span style="font-size:1.2em;">⬆️</span> 지원 데이터 업로드</button>
+                <label for="fileInput" class="upload-btn">지원 데이터 업로드</label>
+                <input type="file" id="fileInput" name="file" style="display:none;" required />
             </form>
         </div>
         <div id="uploadMessage" style="margin-bottom:10px;"></div>
