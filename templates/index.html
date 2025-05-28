@@ -417,10 +417,12 @@
                 <div class="dashboard-card">
                     <div style="display:flex; align-items:center; justify-content:space-between;">
                         <h3>현황</h3>
-                        <span class="stat-num" id="stat-total" style="font-size:2.2rem; margin-left:16px;">0명</span>
+                        <div style="display:flex; flex-direction:column; align-items:flex-end;">
+                            <span style="font-size:0.98rem; color:#888; margin-bottom:0px;">전체</span>
+                            <span class="stat-num" id="stat-total" style="font-size:2.2rem; margin-left:0;">0명</span>
+                        </div>
                     </div>
                     <div class="stat-cards">
-                        <div class="stat-card"><div>전체</div><div class="stat-num" id="stat-apply">0명</div></div>
                         <div class="stat-card"><div>지원중</div><div class="stat-num" id="stat-apply">0명</div></div>
                         <div class="stat-card"><div>검토전</div><div class="stat-num" id="stat-review">0명</div></div>
                         <div class="stat-card"><div>합격 처리</div><div class="stat-num" id="stat-pass">0명</div></div>
@@ -445,11 +447,9 @@
     </div>
     <div class="section">
         <h2>지원자 조회</h2>
-        <div style="display:flex; gap:10px; margin-bottom:18px;">
-            <select id="bootcampSelect"></select>
-            <select id="generationSelect"></select>
+        <div style="display:flex; gap:10px; margin-bottom:18px; align-items:center;">
+            <select id="bootcampSelect" style="min-width:180px;"></select>
         </div>
-        <div id="bootcamp-buttons" style="margin-bottom:18px; display:flex; gap:10px; flex-wrap:wrap;"></div>
         <div class="table-toolbar" style="justify-content:space-between; align-items:flex-end; flex-wrap:wrap;">
             <div style="display:flex; align-items:center; gap:10px; flex:1;">
                 <select id="statusFilter" style="margin-right:12px;">
@@ -464,7 +464,7 @@
                 <input type="text" id="searchInput" placeholder="이름 또는 전화번호 검색..." style="flex:0 0 200px;">
             </div>
             <form class="upload-form" id="uploadForm" enctype="multipart/form-data" style="margin:0;">
-                <label for="fileInput" class="upload-btn">지원 데이터 업로드</label>
+                <label for="fileInput" class="upload-btn" style="cursor:pointer;">지원 데이터 업로드</label>
                 <input type="file" id="fileInput" name="file" style="display:none;" required />
             </form>
         </div>
@@ -656,80 +656,110 @@
         }
     }
 
-    // 부트캠프/기수별 버튼
-    async function renderBootcampButtons() {
+    // 부트캠프 목록을 select로 렌더링
+    async function renderBootcampSelect() {
         const res = await fetch('/bootcamps');
         const data = await res.json();
-        const container = document.getElementById('bootcamp-buttons');
-        container.innerHTML = '';
+        const select = document.getElementById('bootcampSelect');
+        select.innerHTML = '<option value="">전체 부트캠프</option>';
+        // 부트캠프/기수 조합을 option으로
         const unique = Array.from(new Set(data.map(b => b.name + '||' + b.generation)))
             .map(str => {
                 const [name, generation] = str.split('||');
                 return {name, generation};
             });
         unique.forEach(b => {
-            const btn = document.createElement('button');
-            btn.className = 'bootcamp-item';
-            btn.innerText = `${b.name} / ${b.generation}`;
-            btn.onclick = function() {
-                window.selectedBootcamp = b.name;
-                window.selectedGeneration = b.generation;
-                fetchStudents();
-                fetchStatusStats();
-                fetchReasonStats();
-            };
-            const deleteBtn = document.createElement('button');
-            deleteBtn.innerText = '삭제';
-            deleteBtn.className = 'delete-btn';
-            deleteBtn.onclick = async function(e) {
-                e.stopPropagation();
-                if (confirm(`정말로 ${b.name} ${b.generation}기 데이터를 삭제하시겠습니까?`)) {
-                    try {
-                        const res = await fetch('/bootcamp/delete', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({name: b.name, generation: b.generation})
-                        });
-                        const data = await res.json();
-                        if (res.ok) {
-                            alert(data.message);
-                            renderBootcampButtons();
-                            fetchStudents();
-                            fetchStatusStats();
-                        } else {
-                            alert(data.error || '삭제 중 에러가 발생했습니다.');
-                        }
-                    } catch (error) {
-                        alert('삭제 중 에러가 발생했습니다.');
-                    }
-                }
-            };
-            btn.appendChild(deleteBtn);
-            container.appendChild(btn);
+            const label = b.name + (b.generation ? ' / ' + b.generation : '');
+            const value = b.name + '||' + b.generation;
+            const opt = document.createElement('option');
+            opt.value = value;
+            opt.innerText = label;
+            select.appendChild(opt);
         });
+        select.onchange = function() {
+            const val = select.value;
+            if (!val) {
+                window.selectedBootcamp = '';
+                window.selectedGeneration = '';
+            } else {
+                const [name, generation] = val.split('||');
+                window.selectedBootcamp = name;
+                window.selectedGeneration = generation;
+            }
+            fetchStudents();
+            fetchStatusStats();
+            fetchReasonStats();
+        };
     }
 
-    // CSV 업로드 폼 처리
-    document.getElementById('uploadForm').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const formData = new FormData(this);
-        try {
-            const res = await fetch('/upload', {method: 'POST', body: formData});
-            const data = await res.json();
-            if (res.ok) {
-                document.getElementById('uploadMessage').innerText = data.message;
-                document.getElementById('uploadMessage').style.color = 'green';
-                renderBootcampButtons();
-                fetchStudents();
-                fetchStatusStats();
-            } else {
-                document.getElementById('uploadMessage').innerText = data.error || '업로드 중 에러가 발생했습니다.';
-                document.getElementById('uploadMessage').style.color = 'red';
+    // 파일 업로드 버튼 동작 개선
+    const fileInput = document.getElementById('fileInput');
+    const uploadForm = document.getElementById('uploadForm');
+    if (fileInput && uploadForm) {
+        fileInput.onchange = function() {
+            if (fileInput.files.length > 0) {
+                uploadForm.requestSubmit();
             }
-        } catch (error) {
-            document.getElementById('uploadMessage').innerText = '서버 연결 중 에러가 발생했습니다.';
-            document.getElementById('uploadMessage').style.color = 'red';
-        }
+        };
+    }
+
+    // 페이지 로딩 시 초기화
+    document.addEventListener('DOMContentLoaded', function() {
+        renderBootcampSelect();
+        fetchStatusStats();
+        fetchStudents();
+        fetchReasonStats();
+        // 홈 타이틀 클릭 시 전체 초기화
+        document.getElementById('homeTitle').onclick = function(e) {
+            e.preventDefault();
+            window.selectedBootcamp = '';
+            window.selectedGeneration = '';
+            document.getElementById('bootcampSelect').value = '';
+            const statusFilter = document.getElementById('statusFilter');
+            if (statusFilter) statusFilter.value = '';
+            fetchStudents();
+            fetchStatusStats();
+            fetchReasonStats();
+        };
+    });
+
+    document.getElementById('statusFilter').addEventListener('change', fetchStudents);
+    document.getElementById('searchInput').addEventListener('input', fetchStudents);
+
+    document.querySelectorAll('.car-select').forEach(sel => {
+        sel.onchange = async function() {
+            const id = sel.getAttribute('data-id');
+            const card_owned = sel.value;
+            try {
+                const res = await fetch('/student/update', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id, card_owned})
+                });
+                const data = await res.json();
+                if (!res.ok) alert(data.error || '저장 중 에러가 발생했습니다.');
+            } catch (error) {
+                alert('저장 중 에러가 발생했습니다.');
+            }
+        };
+    });
+
+    document.querySelectorAll('.reason-select').forEach(sel => {
+        sel.onchange = async function() {
+            const id = sel.getAttribute('data-id');
+            const considering_reason = sel.value;
+            try {
+                const res = await fetch('/student/update', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({id, considering_reason})
+                });
+                const data = await res.json();
+                if (!res.ok) alert(data.error || '저장 중 에러가 발생했습니다.');
+            } catch (error) {
+                alert('저장 중 에러가 발생했습니다.');
+            }
+        };
     });
 
     // 고민이유 바 차트 (부트캠프/기수별, 전체/필터)
@@ -788,65 +818,6 @@
             }
         });
     }
-
-    // 페이지 로딩 시 초기화
-    document.addEventListener('DOMContentLoaded', function() {
-        renderBootcampButtons();
-        fetchStatusStats();
-        fetchStudents();
-        fetchReasonStats();
-        // 홈 타이틀 클릭 시 전체 초기화
-        document.getElementById('homeTitle').onclick = function(e) {
-            e.preventDefault();
-            window.selectedBootcamp = '';
-            window.selectedGeneration = '';
-            // 상태 필터도 전체로 초기화
-            const statusFilter = document.getElementById('statusFilter');
-            if (statusFilter) statusFilter.value = '';
-            fetchStudents();
-            fetchStatusStats();
-            fetchReasonStats();
-        };
-    });
-
-    document.getElementById('statusFilter').addEventListener('change', fetchStudents);
-    document.getElementById('searchInput').addEventListener('input', fetchStudents);
-
-    document.querySelectorAll('.car-select').forEach(sel => {
-        sel.onchange = async function() {
-            const id = sel.getAttribute('data-id');
-            const card_owned = sel.value;
-            try {
-                const res = await fetch('/student/update', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({id, card_owned})
-                });
-                const data = await res.json();
-                if (!res.ok) alert(data.error || '저장 중 에러가 발생했습니다.');
-            } catch (error) {
-                alert('저장 중 에러가 발생했습니다.');
-            }
-        };
-    });
-
-    document.querySelectorAll('.reason-select').forEach(sel => {
-        sel.onchange = async function() {
-            const id = sel.getAttribute('data-id');
-            const considering_reason = sel.value;
-            try {
-                const res = await fetch('/student/update', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({id, considering_reason})
-                });
-                const data = await res.json();
-                if (!res.ok) alert(data.error || '저장 중 에러가 발생했습니다.');
-            } catch (error) {
-                alert('저장 중 에러가 발생했습니다.');
-            }
-        };
-    });
     </script>
 </body>
 </html>
