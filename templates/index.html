@@ -401,6 +401,24 @@
                 height: 120px !important;
             }
         }
+        .upload-btn {
+            background: #FF7710;
+            color: #fff;
+            border: none;
+            border-radius: 16px;
+            padding: 14px 32px;
+            font-weight: 700;
+            font-size: 1.18rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 2px 8px rgba(255,119,16,0.08);
+            transition: background 0.2s;
+        }
+        .upload-btn:hover {
+            background: #e65c00;
+        }
     </style>
 </head>
 <body>
@@ -464,7 +482,10 @@
                 <input type="text" id="searchInput" placeholder="이름 또는 전화번호 검색..." style="flex:0 0 200px;">
             </div>
             <form class="upload-form" id="uploadForm" enctype="multipart/form-data" style="margin:0;">
-                <label for="fileInput" class="upload-btn" style="cursor:pointer;">지원 데이터 업로드</label>
+                <label for="fileInput" class="upload-btn" style="cursor:pointer;">
+                    <span style="font-size:1.6em;">⬆️</span>
+                    지원 데이터 업로드
+                </label>
                 <input type="file" id="fileInput" name="file" style="display:none;" required />
             </form>
         </div>
