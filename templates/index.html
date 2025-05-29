@@ -631,6 +631,7 @@
                             <option value="yes" ${s.card_owned === 'yes' ? 'selected' : ''}>보유중</option>
                             <option value="no" ${s.card_owned === 'no' ? 'selected' : ''}>미보유</option>
                             <option value="unknown" ${!s.card_owned || s.card_owned === 'unknown' ? 'selected' : ''}>모름</option>
+                            <option value="발급중" ${s.card_owned === '발급중' ? 'selected' : ''}>발급중</option>
                         </select>
                     </td>
                     <td>
@@ -657,7 +658,7 @@
                     const row = btn.closest('tr');
                     const status = row.querySelector('.status-select').value;
                     const memo = row.querySelector('.memo-input').value;
-                    const card_owned = row.querySelector('.car-select').value;
+                    const card_owned = row.querySelector('.status-select').value;
                     const considering_reason = row.querySelector('.reason-select').value;
                     try {
                         const res = await fetch('/student/update', {
