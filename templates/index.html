@@ -611,12 +611,22 @@
             tbody.innerHTML = `<tr><td colspan="10" class="no-data">지원자 데이터가 없습니다</td></tr>`;
         } else {
             const STATUS_OPTIONS = ['대상아님', '검토전', '합격', '고민중', 'HRD최종등록', '지원취소'];
-            data.sort((a, b) => {
-                // 메모가 있으면 -1(앞), 없으면 1(뒤)
-                if ((a.memo && a.memo.trim()) && !(b.memo && b.memo.trim())) return -1;
-                if (!(a.memo && a.memo.trim()) && (b.memo && b.memo.trim())) return 1;
-                return 0;
-            });
+            if (window.memoSortActive) {
+                // 메모 우선 정렬
+                data.sort((a, b) => {
+                    if ((a.memo && a.memo.trim()) && !(b.memo && b.memo.trim())) return -1;
+                    if (!(a.memo && a.memo.trim()) && (b.memo && b.memo.trim())) return 1;
+                    return 0;
+                });
+            } else {
+                // created_at_csv 내림차순(최신순)
+                data.sort((a, b) => {
+                    // 날짜 파싱해서 비교
+                    const dateA = new Date(a.created_at_csv || 0);
+                    const dateB = new Date(b.created_at_csv || 0);
+                    return dateB - dateA;
+                });
+            }
             data.forEach(s => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `

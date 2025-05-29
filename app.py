@@ -41,6 +41,7 @@ class Student(db.Model):
     updated_at = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())  # 수정 시간
     considering_reason = db.Column(db.String(255))  # 고민이유 추가
     card_owned = db.Column(db.String(20))  # 내배카 보유 여부 (길이를 20으로 늘림)
+    created_at_csv = db.Column(db.String(30))  # 또는 db.DateTime
 
 def safe_str(val):
     # NaN, None, float('nan') 모두 ''로 변환
@@ -179,7 +180,8 @@ def upload_csv():
                 phone=phone_str,
                 bootcamp_id=bootcamp.id,
                 card_owned=row.get('내배카 보유', ''),
-                status=status_val
+                status=status_val,
+                created_at_csv=row.get('최초작성일', '')
             )
             db.session.add(student)
             # 새로 추가한 지원자도 existing_students에 즉시 반영
