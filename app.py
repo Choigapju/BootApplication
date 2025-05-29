@@ -40,7 +40,7 @@ class Student(db.Model):
     created_at = db.Column(db.DateTime, default=db.func.now())  # 생성 시간
     updated_at = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())  # 수정 시간
     considering_reason = db.Column(db.String(255))  # 고민이유 추가
-    card_owned = db.Column(db.String(10))  # 내배카 보유 여부
+    card_owned = db.Column(db.String(20))  # 내배카 보유 여부 (길이를 20으로 늘림)
 
 def safe_str(val):
     # NaN, None, float('nan') 모두 ''로 변환
@@ -164,6 +164,8 @@ def upload_csv():
                 elif old_status in ['검토전', '합격'] and status_val == '지원취소':
                     db.session.delete(existing)
                 elif old_status == '검토전' and status_val == '합격':
+                    db.session.delete(existing)
+                elif old_status == '대상아님' and status_val == '합격':
                     db.session.delete(existing)
                 else:
                     continue
