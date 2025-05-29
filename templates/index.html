@@ -505,7 +505,12 @@
                         <th>나이</th>
                         <th>전화번호</th>
                         <th>상태</th>
-                        <th>메모</th>
+                        <th>
+                            메모
+                            <button id="memoSortBtn" style="font-size:0.9em; margin-left:4px; padding:2px 6px; border-radius:6px; border:1px solid #FF7710; background:#FFF3E5; color:#FF7710; cursor:pointer;">
+                                메모 우선
+                            </button>
+                        </th>
                         <th>내배카 보유</th>
                         <th>고민이유</th>
                         <th>저장</th>
@@ -606,6 +611,12 @@
             tbody.innerHTML = `<tr><td colspan="10" class="no-data">지원자 데이터가 없습니다</td></tr>`;
         } else {
             const STATUS_OPTIONS = ['대상아님', '검토전', '합격', '고민중', 'HRD최종등록', '지원취소'];
+            data.sort((a, b) => {
+                // 메모가 있으면 -1(앞), 없으면 1(뒤)
+                if ((a.memo && a.memo.trim()) && !(b.memo && b.memo.trim())) return -1;
+                if (!(a.memo && a.memo.trim()) && (b.memo && b.memo.trim())) return 1;
+                return 0;
+            });
             data.forEach(s => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
@@ -866,6 +877,12 @@
             }
         });
     }
+
+    document.getElementById('memoSortBtn').onclick = function() {
+        window.memoSortActive = !window.memoSortActive;
+        this.style.fontWeight = window.memoSortActive ? 'bold' : 'normal';
+        fetchStudents();
+    };
     </script>
 </body>
 </html>
