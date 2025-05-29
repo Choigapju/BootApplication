@@ -50,6 +50,16 @@ def safe_str(val):
         return ''
     return str(val).strip()
 
+def normalize_phone(phone):
+    # 숫자만 남기고, 10자리면 010 붙이기, 11자리면 그대로
+    digits = ''.join(filter(str.isdigit, str(phone)))
+    if len(digits) == 10 and digits.startswith('10'):
+        digits = '0' + digits
+    return digits.zfill(11)
+
+def normalize_email(email):
+    return str(email).strip().lower()
+
 # CSV 업로드 및 DB 저장
 @app.route('/upload', methods=['POST'])
 def upload_csv():
@@ -121,7 +131,7 @@ def upload_csv():
         # 이미 등록된 지원자 (email, phone) 쌍 미리 조회 (id, status 포함)
         existing_students = {}
         for s in Student.query.filter_by(bootcamp_id=bootcamp.id).all():
-            key = (s.email, s.phone)
+            key = (normalize_email(s.email), normalize_phone(s.phone))
             existing_students[key] = s
 
         status_map = {
@@ -134,13 +144,8 @@ def upload_csv():
         }
         new_students = []
         for _, row in df.iterrows():
-            email = str(row.get('가입 이메일', '')).strip()
-            phone_raw = str(row.get('가입 연락처', '')).strip()
-            # 전화번호 010 보정
-            phone_str = phone_raw
-            if len(phone_str) == 10 and phone_str.startswith('10'):
-                phone_str = '0' + phone_str
-            phone_str = phone_str.zfill(11)
+            email = normalize_email(row.get('가입 이메일', ''))
+            phone_str = normalize_phone(row.get('가입 연락처', ''))
             key = (email, phone_str)
             try:
                 birth_year = int(row['생년월일'].split('-')[0])
