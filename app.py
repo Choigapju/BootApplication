@@ -99,7 +99,7 @@ def upload_csv():
             return jsonify({'error': '파일명에서 부트캠프/기수를 추출할 수 없습니다.'}), 400
 
         try:
-            df = pd.read_csv(file)
+            df = pd.read_csv(file, dtype=str)
             print("CSV 컬럼명:", df.columns.tolist())
             df = df.fillna('')
         except Exception as e:
@@ -149,7 +149,7 @@ def upload_csv():
             phone_str = normalize_phone(row.get('가입 연락처', ''))
             key = (email, phone_str)
             try:
-                birth_year = int(row['생년월일'].split('-')[0])
+                birth_year = int(str(row['생년월일']).split('-')[0])
                 current_year = 2024
                 age = current_year - birth_year
             except:
