@@ -141,7 +141,9 @@ def upload_csv():
             '합격': '합격',
             '고민중': '고민중',
             'HRD최종등록': 'HRD최종등록',
-            '지원취소': '지원취소'
+            '지원취소': '지원취소',
+            '예비합격': '예비합격',
+            '불합격': '불합격'
         }
         new_students = []
         for _, row in df.iterrows():
@@ -165,6 +167,8 @@ def upload_csv():
                 elif old_status in ['검토전', '합격'] and status_val == '지원취소':
                     db.session.delete(existing)
                 elif old_status == '검토전' and status_val == '합격':
+                    db.session.delete(existing)
+                elif old_status == '검토전' and status_val in ['예비합격', '불합격']:
                     db.session.delete(existing)
                 elif old_status == '대상아님' and status_val == '합격':
                     db.session.delete(existing)
