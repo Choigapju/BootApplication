@@ -478,6 +478,8 @@
                     <option value="대상아님">대상아님</option>
                     <option value="검토전">검토전</option>
                     <option value="합격">합격</option>
+                    <option value="예비합격">예비합격</option>
+                    <option value="불합격">불합격</option>
                     <option value="고민중">고민중</option>
                     <option value="HRD최종등록">HRD최종등록</option>
                     <option value="지원취소">지원취소</option>
@@ -539,6 +541,8 @@
             '대상아님': '#B6AFFF',
             '검토전': '#B6FFD6',
             '합격': '#6EC6FF',
+            '예비합격': '#FFD700',
+            '불합격': '#B0B0B0',
             '고민중': '#FFE066',
             'HRD최종등록': '#A8FFB6',
             '지원취소': '#FF7710'
@@ -610,7 +614,16 @@
         if (data.length === 0) {
             tbody.innerHTML = `<tr><td colspan="10" class="no-data">지원자 데이터가 없습니다</td></tr>`;
         } else {
-            const STATUS_OPTIONS = ['대상아님', '검토전', '합격', '고민중', 'HRD최종등록', '지원취소'];
+            const STATUS_OPTIONS = [
+                '대상아님',
+                '검토전',
+                '합격',
+                '예비합격',
+                '불합격',
+                '고민중',
+                'HRD최종등록',
+                '지원취소'
+            ];
             if (window.memoSortActive) {
                 // 메모 우선 정렬
                 data.sort((a, b) => {
