@@ -393,31 +393,30 @@ def download_students():
     status = request.args.get('status', '')
     search = request.args.get('search', '')
 
-    # 쿼리 필터링 로직 (Student 모델 기준)
-    query = Student.query
+    # Bootcamp와 조인
+    query = db.session.query(Student, Bootcamp).join(Bootcamp)
     if bootcamp:
-        query = query.filter_by(bootcamp=bootcamp)
+        query = query.filter(Bootcamp.name == bootcamp)
     if generation:
-        query = query.filter_by(generation=generation)
+        query = query.filter(Bootcamp.generation == generation)
     if status:
-        query = query.filter_by(status=status)
+        query = query.filter(Student.status == status)
     if search:
+        like = f"%{search}%"
         query = query.filter(
-            (Student.name.ilike(f'%{search}%')) | (Student.phone.ilike(f'%{search}%'))
+            db.or_(Student.name.ilike(like), Student.phone.ilike(like), Student.email.ilike(like))
         )
     students = query.all()
 
     # CSV 생성
     output = io.StringIO()
     writer = csv.writer(output)
-    # 헤더
     writer.writerow(['부트캠프', '기수', '이름', '이메일', '성별', '나이', '전화번호', '상태', '메모', '내배카 보유', '고민이유'])
-    for s in students:
+    for student, bootcamp in students:
         writer.writerow([
-            s.bootcamp, s.generation, s.name, s.email, s.gender, s.age, s.phone,
-            s.status, s.memo, s.card_owned, s.considering_reason
+            bootcamp.name, bootcamp.generation, student.name, student.email, student.gender, student.age, student.phone,
+            student.status, student.memo, student.card_owned, student.considering_reason
         ])
-    # utf-8-sig로 인코딩
     response = make_response(output.getvalue().encode('utf-8-sig'))
     response.headers['Content-Disposition'] = 'attachment; filename=students.csv'
     response.headers['Content-Type'] = 'text/csv; charset=utf-8-sig'
