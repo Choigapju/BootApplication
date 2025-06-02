@@ -162,20 +162,26 @@ def upload_csv():
 
             # 중복 지원자 처리
             existing = existing_students.get(key)
+            memo = ''  # 기본값
             if existing:
                 old_status = existing.status
                 if old_status == '대상아님' and status_val == '검토전':
+                    memo = existing.memo  # 메모만 저장
                     db.session.delete(existing)
                 elif old_status in ['검토전', '합격'] and status_val == '지원취소':
+                    memo = existing.memo
                     db.session.delete(existing)
                 elif old_status == '검토전' and status_val == '합격':
+                    memo = existing.memo
                     db.session.delete(existing)
                 elif old_status == '검토전' and status_val in ['예비합격', '불합격']:
+                    memo = existing.memo
                     db.session.delete(existing)
                 elif old_status == '대상아님' and status_val == '합격':
+                    memo = existing.memo
                     db.session.delete(existing)
                 else:
-                    continue
+                    continue  # 여기선 memo 저장 필요 없음(새로 추가 안함)
                 db.session.flush()
             # 신규 또는 삭제 후 추가
             student = Student(
@@ -187,10 +193,11 @@ def upload_csv():
                 bootcamp_id=bootcamp.id,
                 card_owned=row.get('내배카 보유', ''),
                 status=status_val,
-                created_at_csv=row.get('최초작성일', '')
+                created_at_csv=row.get('최초작성일', ''),
+                memo=memo,  # 기존 메모 유지
+                considering_reason=row.get('고민이유', '')
             )
             db.session.add(student)
-            # 새로 추가한 지원자도 existing_students에 즉시 반영
             existing_students[key] = student
         db.session.commit()
         return jsonify({'message': '업로드 및 저장 완료'})
