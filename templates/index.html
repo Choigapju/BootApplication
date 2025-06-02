@@ -486,6 +486,9 @@
                 </select>
                 <input type="text" id="searchInput" placeholder="이름 또는 전화번호 검색..." style="flex:0 0 200px;">
             </div>
+            <button type="button" id="downloadBtn" class="upload-btn" style="background:#fff; color:#FF7710; border:1.5px solid #FF7710; margin-right:8px;">
+                ⬇️ 지원자 데이터 다운로드
+            </button>
             <form class="upload-form" id="uploadForm" enctype="multipart/form-data" style="margin:0;">
                 <label for="fileInput" class="upload-btn" style="cursor:pointer;">
                     <span style="font-size:1.6em;">⬆️</span>
@@ -539,7 +542,7 @@
         // 상태별 색상 매핑
         const statusColorMap = {
             '대상아님': '#B6AFFF',
-            '검토전': '#B6FFD6',
+            '검토전': '#666A73',
             '합격': '#6EC6FF',
             '예비합격': '#FFD700',
             '불합격': '#B0B0B0',
@@ -905,6 +908,16 @@
         window.memoSortActive = !window.memoSortActive;
         this.style.fontWeight = window.memoSortActive ? 'bold' : 'normal';
         fetchStudents();
+    };
+
+    document.getElementById('downloadBtn').onclick = function() {
+        // 현재 필터값 가져오기
+        const bootcamp = window.selectedBootcamp || '';
+        const generation = window.selectedGeneration || '';
+        const status = document.getElementById('statusFilter').value || '';
+        const search = document.getElementById('searchInput')?.value?.trim() || '';
+        let url = `/download_students?bootcamp=${encodeURIComponent(bootcamp)}&generation=${encodeURIComponent(generation)}&status=${encodeURIComponent(status)}&search=${encodeURIComponent(search)}`;
+        window.open(url, '_blank');
     };
     </script>
 </body>

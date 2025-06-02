@@ -1,11 +1,13 @@
 import os
-from flask import Flask, request, jsonify, render_template_string, render_template
+from flask import Flask, request, jsonify, render_template_string, render_template, send_file, make_response
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 import pandas as pd
 from dotenv import load_dotenv
 import math
 from collections import Counter
+import io
+import csv
 
 load_dotenv()  # .env 파일 로드
 
@@ -383,6 +385,43 @@ def stats_by_reason():
     query = query.group_by(Student.considering_reason)
     result = {reason: count for reason, count in query.all()}
     return jsonify(result)
+
+@app.route('/download_students')
+def download_students():
+    bootcamp = request.args.get('bootcamp', '')
+    generation = request.args.get('generation', '')
+    status = request.args.get('status', '')
+    search = request.args.get('search', '')
+
+    # 쿼리 필터링 로직 (Student 모델 기준)
+    query = Student.query
+    if bootcamp:
+        query = query.filter_by(bootcamp=bootcamp)
+    if generation:
+        query = query.filter_by(generation=generation)
+    if status:
+        query = query.filter_by(status=status)
+    if search:
+        query = query.filter(
+            (Student.name.ilike(f'%{search}%')) | (Student.phone.ilike(f'%{search}%'))
+        )
+    students = query.all()
+
+    # CSV 생성
+    output = io.StringIO()
+    writer = csv.writer(output)
+    # 헤더
+    writer.writerow(['부트캠프', '기수', '이름', '이메일', '성별', '나이', '전화번호', '상태', '메모', '내배카 보유', '고민이유'])
+    for s in students:
+        writer.writerow([
+            s.bootcamp, s.generation, s.name, s.email, s.gender, s.age, s.phone,
+            s.status, s.memo, s.card_owned, s.considering_reason
+        ])
+    # utf-8-sig로 인코딩
+    response = make_response(output.getvalue().encode('utf-8-sig'))
+    response.headers['Content-Disposition'] = 'attachment; filename=students.csv'
+    response.headers['Content-Type'] = 'text/csv; charset=utf-8-sig'
+    return response
 
 if __name__ == '__main__':
     with app.app_context():
