@@ -163,6 +163,8 @@ def upload_csv():
             # 중복 지원자 처리
             existing = existing_students.get(key)
             memo = ''  # 기본값
+            should_add = True  # 새로운 학생을 추가할지 여부를 결정하는 플래그
+            
             if existing:
                 old_status = existing.status
                 if old_status == '대상아님' and status_val == '검토전':
@@ -181,23 +183,25 @@ def upload_csv():
                     memo = existing.memo
                     db.session.delete(existing)
                 else:
-                    continue  # 여기선 memo 저장 필요 없음(새로 추가 안함)
-            # 신규 또는 삭제 후 추가
-            student = Student(
-                name=row['가입 이름'],
-                email=email,
-                gender=row.get('성별', ''),
-                age=age,
-                phone=phone_str,
-                bootcamp_id=bootcamp.id,
-                card_owned=row.get('내배카 보유', ''),
-                status=status_val,
-                created_at_csv=row.get('최초작성일', ''),
-                memo=memo,  # 기존 메모 유지
-                considering_reason=row.get('고민이유', '')
-            )
-            db.session.add(student)
-            existing_students[key] = student
+                    should_add = False  # 새로운 학생을 추가하지 않음
+            
+            if should_add:  # 새로운 학생을 추가해야 하는 경우에만
+                # 신규 또는 삭제 후 추가
+                student = Student(
+                    name=row['가입 이름'],
+                    email=email,
+                    gender=row.get('성별', ''),
+                    age=age,
+                    phone=phone_str,
+                    bootcamp_id=bootcamp.id,
+                    card_owned=row.get('내배카 보유', ''),
+                    status=status_val,
+                    created_at_csv=row.get('최초작성일', ''),
+                    memo=memo,  # 기존 메모 유지
+                    considering_reason=row.get('고민이유', '')
+                )
+                db.session.add(student)
+                existing_students[key] = student
         db.session.commit()
         return jsonify({'message': '업로드 및 저장 완료'})
     except Exception as e:
