@@ -182,7 +182,6 @@ def upload_csv():
                     db.session.delete(existing)
                 else:
                     continue  # 여기선 memo 저장 필요 없음(새로 추가 안함)
-                db.session.flush()
             # 신규 또는 삭제 후 추가
             student = Student(
                 name=row['가입 이름'],
