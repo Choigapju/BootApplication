@@ -108,6 +108,9 @@ def upload_csv():
             print("CSV 읽기 에러:", str(e))
             return jsonify({'error': 'CSV 파일을 읽을 수 없습니다.'}), 400
 
+        # CSV에서 중복 지원자 제거 (선택)
+        df = df.drop_duplicates(subset=['가입 이메일', '가입 연락처'])
+
         column_mapping = {
             'name': '가입 이름',
             'email': '가입 이메일',
@@ -152,6 +155,11 @@ def upload_csv():
             email = normalize_email(row.get('가입 이메일', ''))
             phone_str = normalize_phone(row.get('가입 연락처', ''))
             key = (email, phone_str)
+
+            # 이미 이번 업로드에서 새로 추가한 지원자는 건너뜀
+            if key in existing_students and isinstance(existing_students[key], Student) and existing_students[key].id is None:
+                continue
+
             try:
                 birth_year = int(str(row['생년월일']).split('-')[0])
                 current_year = 2024
