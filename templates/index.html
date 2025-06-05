@@ -695,7 +695,7 @@
                     const row = btn.closest('tr');
                     const status = row.querySelector('.status-select').value;
                     const memo = row.querySelector('.memo-input').value;
-                    const card_owned = row.querySelector('.status-select').value;
+                    const card_owned = row.querySelector('.car-select').value;
                     const considering_reason = row.querySelector('.reason-select').value;
                     try {
                         const res = await fetch('/student/update', {
