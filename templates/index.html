@@ -864,6 +864,11 @@
         // 고민이유 라벨 순서 고정
         const reasonLabels = ['전화 안됨', '타 기관과 고민중', '일정 고민중', '비용 고민중', '기타'];
         const values = reasonLabels.map(label => data[label] || 0);
+
+        // y축 최대값 계산 (최대값+1, 최소 3~5 등)
+        const maxValue = Math.max(...values, 3); // 최소 3, 데이터가 더 크면 그 값+1
+        const yMax = maxValue + 1;
+
         window.reasonBarChart = new Chart(barCtx, {
             type: 'bar',
             data: {
@@ -882,7 +887,11 @@
                     legend: { display: false }
                 },
                 scales: {
-                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                    y: { 
+                        beginAtZero: true, 
+                        ticks: { stepSize: 1 },
+                        max: yMax // ← 이 부분 추가!
+                    },
                     x: {
                         ticks: {
                             maxRotation: 0,
