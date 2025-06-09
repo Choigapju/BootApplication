@@ -851,7 +851,7 @@
         };
     });
 
-    // 고민이유 바 차트 (부트캠프/기수별, 전체/필터)
+    // 고민이유 바 차트 (Chart.js 사용)
     async function fetchReasonStats() {
         const bootcamp = window.selectedBootcamp || '';
         const generation = window.selectedGeneration || '';
@@ -866,38 +866,22 @@
         const canvas = document.getElementById('reasonBar');
         const ctx = canvas.getContext('2d');
 
-        // 디스플레이 크기에 맞춰 실제 해상도 설정
-        function resizeCanvas() {
-            const rect = canvas.getBoundingClientRect();
-            canvas.width = rect.width * window.devicePixelRatio;
-            canvas.height = rect.height * window.devicePixelRatio;
-            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-            
-            // 그래프 다시 그리기
-            drawReasonBarChart();
-        }
-
-        // 초기 크기 설정
-        resizeCanvas();
-
-        // 창 크기 변경 시 캔버스 크기 조정
-        window.addEventListener('resize', resizeCanvas);
-
         // 고민이유 라벨 순서 고정
         const reasonLabels = ['전화 안됨', '타 기관과 고민중', '일정 고민중', '비용 고민중', '기타'];
         const values = reasonLabels.map(label => data[label] || 0);
 
         // y축 최대값 계산 (최대값+1, 최소 3~5 등)
-        const maxValue = Math.max(...values, 3); // 최소 3, 데이터가 더 크면 그 값+1
+        const maxValue = Math.max(...values, 3);
         const yMax = maxValue + 1;
 
+        if(window.reasonBarChart) window.reasonBarChart.destroy();
         window.reasonBarChart = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: reasonLabels,
                 datasets: [{
                     data: values,
-                    backgroundColor: '#FFE066', // 노랑
+                    backgroundColor: '#FFE066',
                     borderRadius: 8,
                     barPercentage: 0.7,
                     categoryPercentage: 0.7,
@@ -912,7 +896,7 @@
                     y: { 
                         beginAtZero: true, 
                         ticks: { stepSize: 1 },
-                        max: yMax // ← 이 부분 추가!
+                        max: yMax
                     },
                     x: {
                         ticks: {
