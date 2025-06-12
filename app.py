@@ -109,11 +109,11 @@ def upload_csv():
             return jsonify({'error': 'CSV 파일을 읽을 수 없습니다.'}), 400
 
         # CSV에서 중복 지원자 제거 (선택)
-        df = df.drop_duplicates(subset=['가입 이메일', '가입 연락처'])
+        df = df.drop_duplicates(subset=['지원서 이메일', '가입 연락처'])
 
         column_mapping = {
             'name': '가입 이름',
-            'email': '가입 이메일',
+            'email': '지원서 이메일',
             'gender': '성별',
             'age': '생년월일',
             'phone': '가입 연락처'
@@ -152,7 +152,7 @@ def upload_csv():
         }
         new_students = []
         for _, row in df.iterrows():
-            email = normalize_email(row.get('가입 이메일', ''))
+            email = normalize_email(row.get('지원서 이메일', ''))
             phone_str = normalize_phone(row.get('가입 연락처', ''))
             key = (email, phone_str)
 
