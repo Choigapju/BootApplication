@@ -438,11 +438,21 @@ def download_students():
     # CSV 생성
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['부트캠프', '기수', '이름', '이메일', '성별', '나이', '전화번호', '상태', '메모', '내배카 보유', '고민이유'])
+    writer.writerow(['부트캠프', '기수', '이름', '가입 이메일', '지원서 이메일', '성별', '나이', '전화번호', '상태', '메모', '내배카 보유', '고민이유'])
     for student, bootcamp in students:
         writer.writerow([
-            bootcamp.name, bootcamp.generation, student.name, student.email, student.gender, student.age, student.phone,
-            student.status, student.memo, student.card_owned, student.considering_reason
+            bootcamp.name,
+            bootcamp.generation,
+            student.name,
+            student.signup_email or '',   # 가입 이메일
+            student.email or '',          # 지원서 이메일
+            student.gender,
+            student.age,
+            student.phone,
+            student.status,
+            student.memo,
+            student.card_owned,
+            student.considering_reason
         ])
     response = make_response(output.getvalue().encode('utf-8-sig'))
     response.headers['Content-Disposition'] = 'attachment; filename=students.csv'
