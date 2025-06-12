@@ -459,6 +459,30 @@ def download_students():
     response.headers['Content-Type'] = 'text/csv; charset=utf-8-sig'
     return response
 
+@app.route('/students/bulk_update', methods=['POST'])
+def bulk_update_students():
+    data = request.get_json()
+    updates = data.get('updates', [])
+    try:
+        for upd in updates:
+            student = Student.query.get(upd['id'])
+            if not student:
+                continue
+            if 'status' in upd:
+                student.status = upd['status']
+            if 'memo' in upd:
+                student.memo = upd['memo']
+            if 'card_owned' in upd:
+                student.card_owned = upd['card_owned']
+            if 'considering_reason' in upd:
+                cr = upd['considering_reason']
+                student.considering_reason = None if cr.strip() == '' or cr == '선택' else cr
+        db.session.commit()
+        return jsonify({'message': '전체 저장 완료'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()  # 테이블이 없을 때만 생성(데이터는 보존)

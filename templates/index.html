@@ -522,7 +522,9 @@
                         </th>
                         <th>내배카 보유</th>
                         <th>고민이유</th>
-                        <th>저장</th>
+                        <th colspan="...">
+                          <button id="saveAllBtn" class="save-btn">전체 저장</button>
+                        </th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -688,39 +690,8 @@
                             <option value="기타" ${(s.considering_reason || '').trim() === '기타' ? 'selected' : ''}>기타</option>
                         </select>
                     </td>
-                    <td>
-                        <button class="save-btn" data-id="${s.id}">저장</button>
-                    </td>
                 `;
                 tbody.appendChild(tr);
-            });
-
-            // 저장 버튼 이벤트 등록
-            document.querySelectorAll('.save-btn').forEach(btn => {
-                btn.onclick = async function() {
-                    const id = btn.getAttribute('data-id');
-                    const row = btn.closest('tr');
-                    const status = row.querySelector('.status-select').value;
-                    const memo = row.querySelector('.memo-input').value;
-                    const card_owned = row.querySelector('.car-select').value;
-                    const considering_reason = row.querySelector('.reason-select').value;
-                    try {
-                        const res = await fetch('/student/update', {
-                            method: 'POST',
-                            headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({id, status, memo, card_owned, considering_reason})
-                        });
-                        const data = await res.json();
-                        if (res.ok) {
-                            alert('성공적으로 저장되었습니다.');
-                            fetchStudents();
-                        } else {
-                            alert(data.error || '저장 중 에러가 발생했습니다.');
-                        }
-                    } catch (error) {
-                        alert('저장 중 에러가 발생했습니다.');
-                    }
-                };
             });
         }
     }
@@ -936,6 +907,39 @@
         const search = document.getElementById('searchInput')?.value?.trim() || '';
         let url = `/download_students?bootcamp=${encodeURIComponent(bootcamp)}&generation=${encodeURIComponent(generation)}&status=${encodeURIComponent(status)}&search=${encodeURIComponent(search)}`;
         window.open(url, '_blank');
+    };
+
+    document.getElementById('saveAllBtn').onclick = async function() {
+        // 현재 테이블의 모든 행을 순회하며 데이터 수집
+        const rows = document.querySelectorAll('#studentsTable tbody tr');
+        const updates = [];
+        rows.forEach(row => {
+            const id = row.querySelector('.status-select')?.getAttribute('data-id');
+            if (!id) return;
+            const status = row.querySelector('.status-select').value;
+            const memo = row.querySelector('.memo-input').value;
+            const card_owned = row.querySelector('.car-select').value;
+            const considering_reason = row.querySelector('.reason-select').value;
+            updates.push({id, status, memo, card_owned, considering_reason});
+        });
+
+        // 한번에 백엔드로 전송
+        try {
+            const res = await fetch('/students/bulk_update', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({updates})
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert('전체 저장이 완료되었습니다.');
+                fetchStudents();
+            } else {
+                alert(data.error || '저장 중 에러가 발생했습니다.');
+            }
+        } catch (error) {
+            alert('저장 중 에러가 발생했습니다.');
+        }
     };
     </script>
 </body>
