@@ -44,6 +44,7 @@ class Student(db.Model):
     considering_reason = db.Column(db.String(255))  # 고민이유 추가
     card_owned = db.Column(db.String(20))  # 내배카 보유 여부 (길이를 20으로 늘림)
     created_at_csv = db.Column(db.String(30))  # 또는 db.DateTime
+    signup_email = db.Column(db.String(100))  # 가입 이메일 추가
 
 def safe_str(val):
     # NaN, None, float('nan') 모두 ''로 변환
@@ -108,22 +109,6 @@ def upload_csv():
             print("CSV 읽기 에러:", str(e))
             return jsonify({'error': 'CSV 파일을 읽을 수 없습니다.'}), 400
 
-        # CSV에서 중복 지원자 제거 (선택)
-        df = df.drop_duplicates(subset=['지원서 이메일', '가입 연락처'])
-
-        column_mapping = {
-            'name': '가입 이름',
-            'email': '지원서 이메일',
-            'gender': '성별',
-            'age': '생년월일',
-            'phone': '가입 연락처'
-        }
-        try:
-            df = df.rename(columns=column_mapping)
-        except Exception as e:
-            print("컬럼명 변경 에러:", str(e))
-            return jsonify({'error': 'CSV 파일의 컬럼명을 변경할 수 없습니다.'}), 400
-
         # 부트캠프 객체 미리 조회/생성
         bootcamp = Bootcamp.query.filter_by(
             name=bootcamp_name,
@@ -134,11 +119,20 @@ def upload_csv():
             db.session.add(bootcamp)
             db.session.commit()
 
-        # 이미 등록된 지원자 (email, phone) 쌍 미리 조회 (id, status 포함)
+        # 1. 기존 지원자 정보로 모든 조합의 키를 만든다
         existing_students = {}
         for s in Student.query.filter_by(bootcamp_id=bootcamp.id).all():
-            key = (normalize_email(s.email), normalize_phone(s.phone))
-            existing_students[key] = s
+            emails = set([normalize_email(s.email)])
+            if getattr(s, 'signup_email', None):
+                emails.add(normalize_email(s.signup_email))
+            phones = set([normalize_phone(s.phone)])
+            for e in emails:
+                for p in phones:
+                    existing_students[(e, p)] = s
+            # 이메일끼리도 키로 추가
+            for e1 in emails:
+                for e2 in emails:
+                    existing_students[(e1, e2)] = s
 
         status_map = {
             '대상아님': '대상아님',
@@ -153,12 +147,21 @@ def upload_csv():
         new_students = []
         for _, row in df.iterrows():
             email = normalize_email(row.get('지원서 이메일', ''))
+            signup_email = normalize_email(row.get('가입 이메일', ''))
             phone_str = normalize_phone(row.get('가입 연락처', ''))
-            key = (email, phone_str)
 
-            # 이미 이번 업로드에서 새로 추가한 지원자는 건너뜀
-            if key in existing_students and isinstance(existing_students[key], Student) and existing_students[key].id is None:
-                continue
+            keys_to_check = [
+                (email, phone_str),
+                (signup_email, phone_str),
+                (email, signup_email),
+                (signup_email, email),
+                (signup_email, signup_email),
+                (email, email)
+            ]
+            # 하나라도 겹치면 중복으로 간주
+            is_duplicate = any(key in existing_students for key in keys_to_check)
+            if is_duplicate:
+                continue  # 중복이면 건너뜀
 
             try:
                 birth_year = int(str(row['생년월일']).split('-')[0])
@@ -169,7 +172,7 @@ def upload_csv():
             status_val = status_map.get(str(row.get('합불상태', '')).strip(), '대상아님')
 
             # 중복 지원자 처리
-            existing = existing_students.get(key)
+            existing = existing_students.get((email, phone_str))
             memo = ''
             should_add = True
             
@@ -178,23 +181,23 @@ def upload_csv():
                 if old_status == '대상아님' and status_val == '검토전':
                     memo = existing.memo
                     db.session.delete(existing)
-                    del existing_students[key]
+                    del existing_students[(email, phone_str)]
                 elif old_status in ['검토전', '합격'] and status_val == '지원취소':
                     memo = existing.memo
                     db.session.delete(existing)
-                    del existing_students[key]
+                    del existing_students[(email, phone_str)]
                 elif old_status == '검토전' and status_val == '합격':
                     memo = existing.memo
                     db.session.delete(existing)
-                    del existing_students[key]
+                    del existing_students[(email, phone_str)]
                 elif old_status == '검토전' and status_val in ['예비합격', '불합격']:
                     memo = existing.memo
                     db.session.delete(existing)
-                    del existing_students[key]
+                    del existing_students[(email, phone_str)]
                 elif old_status == '대상아님' and status_val == '합격':
                     memo = existing.memo
                     db.session.delete(existing)
-                    del existing_students[key]
+                    del existing_students[(email, phone_str)]
                 else:
                     should_add = False
             
@@ -202,6 +205,7 @@ def upload_csv():
                 student = Student(
                     name=row['가입 이름'],
                     email=email,
+                    signup_email=signup_email,
                     gender=row.get('성별', ''),
                     age=age,
                     phone=phone_str,
@@ -210,10 +214,10 @@ def upload_csv():
                     status=status_val,
                     created_at_csv=row.get('최초작성일', ''),
                     memo=memo,
-                    considering_reason=row.get('고민이유', '')
+                    considering_reason=row.get('고민이유', ''),
                 )
                 db.session.add(student)
-                existing_students[key] = student
+                existing_students[(email, phone_str)] = student
         db.session.commit()
         return jsonify({'message': '업로드 및 저장 완료'})
     except Exception as e:
@@ -254,7 +258,8 @@ def get_students():
             'status': student.status or '',
             'memo': student.memo or '',
             'card_owned': student.card_owned or '',
-            'considering_reason': student.considering_reason or ''
+            'considering_reason': student.considering_reason or '',
+            'signup_email': student.signup_email or ''
         })
     return jsonify(results)
 

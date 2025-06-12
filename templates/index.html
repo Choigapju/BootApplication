@@ -653,7 +653,10 @@
                     <td>${s.bootcamp || ''}</td>
                     <td>${s.generation || ''}</td>
                     <td>${s.name || ''}</td>
-                    <td>${s.email || ''}</td>
+                    <td>
+                        가입: ${s.signup_email || '-'}<br>
+                        지원서: ${s.email || '-'}
+                    </td>
                     <td>${s.gender || ''}</td>
                     <td>${s.age || ''}</td>
                     <td>${s.phone || ''}</td>
