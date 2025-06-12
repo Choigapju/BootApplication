@@ -522,8 +522,8 @@
                         </th>
                         <th>내배카 보유</th>
                         <th>고민이유</th>
-                        <th colspan="...">
-                          <button id="saveAllBtn" class="save-btn">전체 저장</button>
+                        <th>저장
+                          <button id="saveAllBtn" class="save-btn" style="margin-left:8px;">전체 저장</button>
                         </th>
                     </tr>
                 </thead>
@@ -689,6 +689,9 @@
                             <option value="비용 고민중" ${(s.considering_reason || '').trim() === '비용 고민중' ? 'selected' : ''}>비용 고민중</option>
                             <option value="기타" ${(s.considering_reason || '').trim() === '기타' ? 'selected' : ''}>기타</option>
                         </select>
+                    </td>
+                    <td>
+                        <button class="save-btn" data-id="${s.id}">저장</button>
                     </td>
                 `;
                 tbody.appendChild(tr);
