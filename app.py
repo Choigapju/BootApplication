@@ -105,6 +105,15 @@ def upload_csv():
             df = pd.read_csv(file, dtype=str)
             print("CSV 컬럼명:", df.columns.tolist())
             df = df.fillna('')
+
+            # 지원완료일을 datetime으로 변환(정렬을 위해)
+            df['지원완료일'] = pd.to_datetime(df['지원완료일'], errors='coerce')
+
+            # 내림차순 정렬(최신 데이터가 위로)
+            df = df.sort_values('지원완료일', ascending=False)
+
+            # 중복 제거: 이름, 전화번호, 지원서이메일, 가입이메일 중 하나라도 같으면 첫 번째(최신)만 남김
+            df = df.drop_duplicates(subset=['가입 이름', '가입 연락처', '지원서 이메일', '가입 이메일'], keep='first')
         except Exception as e:
             print("CSV 읽기 에러:", str(e))
             return jsonify({'error': 'CSV 파일을 읽을 수 없습니다.'}), 400
