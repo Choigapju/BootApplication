@@ -149,61 +149,42 @@ def upload_csv():
             email = normalize_email(row.get('지원서 이메일', ''))
             signup_email = normalize_email(row.get('가입 이메일', ''))
             phone_str = normalize_phone(row.get('가입 연락처', ''))
+            name = row.get('가입 이름', '').strip()
 
-            keys_to_check = [
-                (email, phone_str),
-                (signup_email, phone_str),
-                (email, signup_email),
-                (signup_email, email),
-                (signup_email, signup_email),
-                (email, email)
-            ]
-            # 하나라도 겹치면 중복으로 간주
-            is_duplicate = any(key in existing_students for key in keys_to_check)
-            if is_duplicate:
-                continue  # 중복이면 건너뜀
+            # 기존 지원자 찾기 (이름, 전화번호, 이메일(둘 다) 중 하나라도 일치하면)
+            candidates = Student.query.filter_by(bootcamp_id=bootcamp.id).all()
+            found = None
+            for s in candidates:
+                if (
+                    s.name == name or
+                    normalize_phone(s.phone) == phone_str or
+                    normalize_email(s.email) == email or
+                    (getattr(s, 'signup_email', None) and normalize_email(s.signup_email) == signup_email)
+                ):
+                    found = s
+                    break
 
-            try:
-                birth_year = int(str(row['생년월일']).split('-')[0])
-                current_year = 2024
-                age = current_year - birth_year
-            except:
-                age = None
             status_val = status_map.get(str(row.get('합불상태', '')).strip(), '대상아님')
-
-            # 중복 지원자 처리
-            existing = existing_students.get((email, phone_str))
-            memo = ''
             should_add = True
-            
-            if existing:
-                old_status = existing.status
-                if old_status == '대상아님' and status_val == '검토전':
-                    memo = existing.memo
-                    db.session.delete(existing)
-                    del existing_students[(email, phone_str)]
-                elif old_status in ['검토전', '합격'] and status_val == '지원취소':
-                    memo = existing.memo
-                    db.session.delete(existing)
-                    del existing_students[(email, phone_str)]
-                elif old_status == '검토전' and status_val == '합격':
-                    memo = existing.memo
-                    db.session.delete(existing)
-                    del existing_students[(email, phone_str)]
-                elif old_status == '검토전' and status_val in ['예비합격', '불합격']:
-                    memo = existing.memo
-                    db.session.delete(existing)
-                    del existing_students[(email, phone_str)]
-                elif old_status == '대상아님' and status_val == '합격':
-                    memo = existing.memo
-                    db.session.delete(existing)
-                    del existing_students[(email, phone_str)]
-                else:
-                    should_add = False
-            
+
+            # 1. HRD최종등록자가 이미 있으면, 업로드 데이터는 무시(추가하지 않음)
+            if found and found.status == 'HRD최종등록':
+                should_add = False  # 기존 데이터 유지, 새로 추가하지 않음
+
+            # 2. 그 외에는 기존 지원자 삭제 후 새로 추가
+            elif found:
+                db.session.delete(found)
+
             if should_add:
+                try:
+                    birth_year = int(str(row['생년월일']).split('-')[0])
+                    current_year = 2024
+                    age = current_year - birth_year
+                except:
+                    age = None
+
                 student = Student(
-                    name=row['가입 이름'],
+                    name=name,
                     email=email,
                     signup_email=signup_email,
                     gender=row.get('성별', ''),
@@ -213,11 +194,10 @@ def upload_csv():
                     card_owned=row.get('내배카 보유', ''),
                     status=status_val,
                     created_at_csv=row.get('최초작성일', ''),
-                    memo=memo,
+                    memo='',
                     considering_reason=row.get('고민이유', ''),
                 )
                 db.session.add(student)
-                existing_students[(email, phone_str)] = student
         db.session.commit()
         return jsonify({'message': '업로드 및 저장 완료'})
     except Exception as e:
