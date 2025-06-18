@@ -119,6 +119,13 @@ def upload_csv():
             db.session.add(bootcamp)
             db.session.commit()
 
+        # 업로드 시작 전에
+        Student.query.filter(
+            Student.bootcamp_id == bootcamp.id,
+            Student.status != 'HRD최종등록'
+        ).delete()
+        db.session.commit()
+
         # 1. 기존 지원자 정보로 모든 조합의 키를 만든다
         existing_students = {}
         for s in Student.query.filter_by(bootcamp_id=bootcamp.id).all():
@@ -193,7 +200,7 @@ def upload_csv():
                     bootcamp_id=bootcamp.id,
                     card_owned=row.get('내배카 보유', ''),
                     status=status_val,
-                    created_at_csv=row.get('최초작성일', ''),
+                    created_at_csv=row.get('지원완료일', ''),
                     memo='',
                     considering_reason=row.get('고민이유', ''),
                 )
@@ -418,9 +425,10 @@ def download_students():
     # CSV 생성
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['부트캠프', '기수', '이름', '가입 이메일', '지원서 이메일', '성별', '나이', '전화번호', '상태', '메모', '내배카 보유', '고민이유'])
+    writer.writerow(['지원완료일', '부트캠프', '기수', '이름', '가입 이메일', '지원서 이메일', '성별', '나이', '전화번호', '상태', '메모', '내배카 보유', '고민이유'])
     for student, bootcamp in students:
         writer.writerow([
+            student.created_at_csv or '',  # 지원완료일(제일 앞)
             bootcamp.name,
             bootcamp.generation,
             student.name,
