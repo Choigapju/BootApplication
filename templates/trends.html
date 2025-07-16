@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>지원 추이 분석 - KDT 교육 지원자 관리</title>
+    <!-- Pretendard 폰트 CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+    <style>
+        :root {
+            --main-orange: #FF7710;
+            --main-bg: #FFFAF5;
+            --main-dark: #3F3F3F;
+            --main-white: #fff;
+            --main-shadow: 0 2px 8px rgba(63,63,63,0.06);
+        }
+        body {
+            font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
+            background: #f8f9fa;
+            color: var(--main-dark);
+            margin: 0;
+            padding: 0;
+        }
+        .header {
+            background: var(--main-white);
+            box-shadow: var(--main-shadow);
+            padding: 24px 0 16px 0;
+            text-align: center;
+            width: 100%;
+        }
+        .header-title {
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: var(--main-dark);
+            letter-spacing: -1px;
+        }
+        .main-header {
+            width: 100vw;
+            background: #FF7710;
+            color: #fff;
+            font-size: 2rem;
+            font-weight: 900;
+            padding: 24px 0 18px 32px;
+            letter-spacing: -1px;
+            box-sizing: border-box;
+        }
+        .section {
+            background: var(--main-white);
+            border-radius: 18px;
+            box-shadow: var(--main-shadow);
+            margin: 32px 0;
+            padding: 32px 3vw;
+            max-width: 100vw;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        h2 {
+            font-weight: 800;
+            margin-top: 0;
+            color: var(--main-dark);
+            margin-bottom: 24px;
+        }
+        .trend-controls {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            background: var(--main-bg);
+            color: var(--main-dark);
+            border: 2px solid var(--main-orange);
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab-btn.active {
+            background: var(--main-orange);
+            color: white;
+        }
+        .tab-btn:hover {
+            background: var(--main-orange);
+            color: white;
+        }
+        select, input {
+            border: 1.5px solid var(--main-orange);
+            border-radius: 8px;
+            padding: 8px 12px;
+            background: var(--main-bg);
+            color: var(--main-dark);
+            font-size: 1rem;
+        }
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--main-shadow);
+            margin-top: 20px;
+        }
+        #trendChart {
+            width: 100% !important;
+            height: 400px !important;
+        }
+        .stats-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: var(--main-bg);
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+        }
+        .stat-card .label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        .stat-card .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--main-orange);
+        }
+        .back-btn {
+            background: var(--main-orange);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 16px;
+        }
+        .back-btn:hover {
+            background: #e65c00;
+        }
+        @media (max-width: 768px) {
+            .trend-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .section {
+                padding: 20px 4vw;
+            }
+            #trendChart {
+                height: 300px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-header">
+        <a href="/" class="back-btn" style="color:inherit;text-decoration:none;cursor:pointer;">
+            <span>KDT 교육 지원자 관리 시스템</span>
+        </a>
+    </div>
+    
+    <div class="section">
+        <a href="/" class="back-btn">← 메인으로 돌아가기</a>
+        <h2>지원 추이 분석</h2>
+        
+        <div class="trend-controls">
+            <button class="tab-btn active" data-tab="daily">일별 추이</button>
+            <button class="tab-btn" data-tab="weekly">주별 추이</button>
+            <select id="periodFilter">
+                <option value="7">최근 7일</option>
+                <option value="30">최근 30일</option>
+                <option value="90">최근 90일</option>
+                <option value="all">전체</option>
+            </select>
+            <select id="bootcampFilter">
+                <option value="">전체 부트캠프</option>
+            </select>
+        </div>
+        
+        <div class="stats-summary">
+            <div class="stat-card">
+                <div class="label">총 지원자</div>
+                <div class="value" id="totalApplicants">0명</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">평균 일일 지원</div>
+                <div class="value" id="avgDaily">0명</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">최고 일일 지원</div>
+                <div class="value" id="maxDaily">0명</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">최근 지원</div>
+                <div class="value" id="recentApplicants">0명</div>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <canvas id="trendChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        let currentChart = null;
+        let currentTab = 'daily';
+        
+        // 페이지 로딩 시 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            loadBootcampOptions();
+            fetchTrends();
+            
+            // 탭 변경 이벤트
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.onclick = function() {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentTab = this.getAttribute('data-tab');
+                    fetchTrends();
+                };
+            });
+            
+            // 필터 변경 이벤트
+            document.getElementById('periodFilter').addEventListener('change', fetchTrends);
+            document.getElementById('bootcampFilter').addEventListener('change', fetchTrends);
+        });
+        
+        // 부트캠프 옵션 로드
+        async function loadBootcampOptions() {
+            try {
+                const res = await fetch('/bootcamps');
+                const data = await res.json();
+                const select = document.getElementById('bootcampFilter');
+                
+                const unique = Array.from(new Set(data.map(b => b.name + '||' + b.generation)))
+                    .map(str => {
+                        const [name, generation] = str.split('||');
+                        return {name, generation};
+                    });
+                
+                unique.forEach(b => {
+                    const label = b.name + (b.generation ? ' / ' + b.generation : '');
+                    const value = b.name + '||' + b.generation;
+                    const opt = document.createElement('option');
+                    opt.value = value;
+                    opt.innerText = label;
+                    select.appendChild(opt);
+                });
+            } catch (error) {
+                console.error('부트캠프 로드 실패:', error);
+            }
+        }
+        
+        // 추이 데이터 가져오기
+        async function fetchTrends() {
+            const period = document.getElementById('periodFilter').value;
+            const bootcamp = document.getElementById('bootcampFilter').value;
+            
+            try {
+                const url = currentTab === 'daily' 
+                    ? `/trends/daily_applications?period=${period}&bootcamp=${encodeURIComponent(bootcamp)}`
+                    : `/trends/weekly_applications?period=${period}&bootcamp=${encodeURIComponent(bootcamp)}`;
+                
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                if (res.ok) {
+                    renderChart(data);
+                    updateStats(data);
+                } else {
+                    console.error('데이터 로드 실패:', data.error);
+                }
+            } catch (error) {
+                console.error('네트워크 오류:', error);
+            }
+        }
+        
+        // 차트 렌더링
+        function renderChart(data) {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            
+            if (currentChart) {
+                currentChart.destroy();
+            }
+            
+            const labels = data.labels || [];
+            const datasets = data.datasets || [];
+            
+            currentChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: currentTab === 'daily' ? '일별 지원 완료자 추이' : '주별 지원 완료자 추이',
+                            font: {
+                                size: 16,
+                                weight: 'bold'
+                            }
+                        },
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 통계 업데이트
+        function updateStats(data) {
+            const stats = data.stats || {};
+            document.getElementById('totalApplicants').innerText = (stats.total || 0) + '명';
+            document.getElementById('avgDaily').innerText = (stats.average || 0) + '명';
+            document.getElementById('maxDaily').innerText = (stats.max || 0) + '명';
+            document.getElementById('recentApplicants').innerText = (stats.recent || 0) + '명';
+        }
+    </script>
+</body>
+</html> 

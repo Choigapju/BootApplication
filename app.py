@@ -483,6 +483,157 @@ def bulk_update_students():
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
+# 지원 추이 분석 페이지
+@app.route('/trends')
+def trends():
+    return render_template('trends.html')
+
+# 일별 지원 완료자 추이 API
+@app.route('/trends/daily_applications')
+def get_daily_trends():
+    period = request.args.get('period', '30')
+    bootcamp = request.args.get('bootcamp', '')
+    
+    try:
+        # 기본 쿼리
+        query = db.session.query(Student, Bootcamp).join(Bootcamp)
+        
+        # 부트캠프 필터
+        if bootcamp:
+            bootcamp_name, generation = bootcamp.split('||')
+            query = query.filter(Bootcamp.name == bootcamp_name)
+            if generation:
+                query = query.filter(Bootcamp.generation == generation)
+        
+        # 기간 필터
+        if period != 'all':
+            days = int(period)
+            from datetime import datetime, timedelta
+            cutoff_date = datetime.now() - timedelta(days=days)
+            query = query.filter(Student.created_at_csv >= cutoff_date.strftime('%Y-%m-%d'))
+        
+        students = query.all()
+        
+        # 일별 집계
+        daily_counts = {}
+        for student, bootcamp in students:
+            if student.created_at_csv:
+                try:
+                    # 날짜 파싱 (YYYY-MM-DD 형식 가정)
+                    date_str = str(student.created_at_csv).split(' ')[0]  # 시간 부분 제거
+                    if date_str in daily_counts:
+                        daily_counts[date_str] += 1
+                    else:
+                        daily_counts[date_str] = 1
+                except:
+                    continue
+        
+        # 날짜순 정렬
+        sorted_dates = sorted(daily_counts.keys())
+        labels = sorted_dates
+        data = [daily_counts[date] for date in sorted_dates]
+        
+        # 통계 계산
+        total = sum(data)
+        average = round(total / len(data), 1) if data else 0
+        max_count = max(data) if data else 0
+        recent = data[-1] if data else 0
+        
+        return jsonify({
+            'labels': labels,
+            'datasets': [{
+                'label': '일별 지원 완료자',
+                'data': data,
+                'borderColor': '#FF7710',
+                'backgroundColor': 'rgba(255, 119, 16, 0.1)',
+                'tension': 0.1
+            }],
+            'stats': {
+                'total': total,
+                'average': average,
+                'max': max_count,
+                'recent': recent
+            }
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# 주별 지원 완료자 추이 API
+@app.route('/trends/weekly_applications')
+def get_weekly_trends():
+    period = request.args.get('period', '30')
+    bootcamp = request.args.get('bootcamp', '')
+    
+    try:
+        # 기본 쿼리
+        query = db.session.query(Student, Bootcamp).join(Bootcamp)
+        
+        # 부트캠프 필터
+        if bootcamp:
+            bootcamp_name, generation = bootcamp.split('||')
+            query = query.filter(Bootcamp.name == bootcamp_name)
+            if generation:
+                query = query.filter(Bootcamp.generation == generation)
+        
+        # 기간 필터
+        if period != 'all':
+            days = int(period)
+            from datetime import datetime, timedelta
+            cutoff_date = datetime.now() - timedelta(days=days)
+            query = query.filter(Student.created_at_csv >= cutoff_date.strftime('%Y-%m-%d'))
+        
+        students = query.all()
+        
+        # 주별 집계
+        weekly_counts = {}
+        for student, bootcamp in students:
+            if student.created_at_csv:
+                try:
+                    # 날짜 파싱
+                    date_str = str(student.created_at_csv).split(' ')[0]
+                    date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                    
+                    # 주차 계산 (월요일 시작)
+                    week_start = date_obj - timedelta(days=date_obj.weekday())
+                    week_key = week_start.strftime('%Y-%m-%d')
+                    
+                    if week_key in weekly_counts:
+                        weekly_counts[week_key] += 1
+                    else:
+                        weekly_counts[week_key] = 1
+                except:
+                    continue
+        
+        # 주차순 정렬
+        sorted_weeks = sorted(weekly_counts.keys())
+        labels = [f"{week}주차" for week in sorted_weeks]
+        data = [weekly_counts[week] for week in sorted_weeks]
+        
+        # 통계 계산
+        total = sum(data)
+        average = round(total / len(data), 1) if data else 0
+        max_count = max(data) if data else 0
+        recent = data[-1] if data else 0
+        
+        return jsonify({
+            'labels': labels,
+            'datasets': [{
+                'label': '주별 지원 완료자',
+                'data': data,
+                'borderColor': '#6EC6FF',
+                'backgroundColor': 'rgba(110, 198, 255, 0.1)',
+                'tension': 0.1
+            }],
+            'stats': {
+                'total': total,
+                'average': average,
+                'max': max_count,
+                'recent': recent
+            }
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()  # 테이블이 없을 때만 생성(데이터는 보존)
