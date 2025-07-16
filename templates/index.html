@@ -804,39 +804,51 @@
         fetchStudents();
         fetchReasonStats();
         
-        // 전체 저장 버튼 이벤트 등록
-        document.getElementById('saveAllBtn').onclick = async function() {
-            // 현재 테이블의 모든 행을 순회하며 데이터 수집
-            const rows = document.querySelectorAll('#studentsTable tbody tr');
-            const updates = [];
-            rows.forEach(row => {
-                const id = row.querySelector('.status-select')?.getAttribute('data-id');
-                if (!id) return;
-                const status = row.querySelector('.status-select').value;
-                const memo = row.querySelector('.memo-input').value;
-                const card_owned = row.querySelector('.car-select').value;
-                const considering_reason = row.querySelector('.reason-select').value;
-                updates.push({id, status, memo, card_owned, considering_reason});
-            });
+        // 전체 저장 버튼 이벤트 등록 (이벤트 위임 방식)
+        document.addEventListener('click', async function(e) {
+            if (e.target && e.target.id === 'saveAllBtn') {
+                // 버튼 비활성화 및 로딩 표시
+                const btn = e.target;
+                const originalText = btn.innerText;
+                btn.disabled = true;
+                btn.innerText = '저장 중...';
+                
+                try {
+                    // 현재 테이블의 모든 행을 순회하며 데이터 수집
+                    const rows = document.querySelectorAll('#studentsTable tbody tr');
+                    const updates = [];
+                    rows.forEach(row => {
+                        const id = row.querySelector('.status-select')?.getAttribute('data-id');
+                        if (!id) return;
+                        const status = row.querySelector('.status-select').value;
+                        const memo = row.querySelector('.memo-input').value;
+                        const card_owned = row.querySelector('.car-select').value;
+                        const considering_reason = row.querySelector('.reason-select').value;
+                        updates.push({id, status, memo, card_owned, considering_reason});
+                    });
 
-            // 한번에 백엔드로 전송
-            try {
-                const res = await fetch('/students/bulk_update', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({updates})
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    alert('전체 저장이 완료되었습니다.');
-                    fetchStudents();
-                } else {
-                    alert(data.error || '저장 중 에러가 발생했습니다.');
+                    // 한번에 백엔드로 전송
+                    const res = await fetch('/students/bulk_update', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({updates})
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        alert('전체 저장이 완료되었습니다.');
+                        fetchStudents();
+                    } else {
+                        alert(data.error || '저장 중 에러가 발생했습니다.');
+                    }
+                } catch (error) {
+                    alert('저장 중 에러가 발생했습니다.');
+                } finally {
+                    // 버튼 복원
+                    btn.disabled = false;
+                    btn.innerText = originalText;
                 }
-            } catch (error) {
-                alert('저장 중 에러가 발생했습니다.');
             }
-        };
+        });
         
         // 홈 타이틀 클릭 시 전체 초기화
         document.getElementById('homeTitle').onclick = function(e) {
