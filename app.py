@@ -632,7 +632,7 @@ def get_weekly_trends():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# 일자별 지원자 통계표 API
+# 일자별 지원자 통계표 API (누적 추이)
 @app.route('/trends/daily_stats_table')
 def get_daily_stats_table():
     period = request.args.get('period', '30')
@@ -692,12 +692,18 @@ def get_daily_stats_table():
             elif student.status == '불합격':
                 daily_stats[day]['불합격'] += 1
 
-        # 날짜순 정렬
+        # 날짜순 정렬 및 누적 합계 계산
         sorted_days = sorted(daily_stats.keys())
         result = []
+        acc = {'지원완료': 0, '합격': 0, '예비합격': 0, '지원취소': 0, '불합격': 0}
         for day in sorted_days:
+            acc['지원완료'] += daily_stats[day]['지원완료']
+            acc['합격'] += daily_stats[day]['합격']
+            acc['예비합격'] += daily_stats[day]['예비합격']
+            acc['지원취소'] += daily_stats[day]['지원취소']
+            acc['불합격'] += daily_stats[day]['불합격']
             row = {'date': day}
-            row.update(daily_stats[day])
+            row.update({k: acc[k] for k in acc})
             result.append(row)
         return jsonify(result)
     except Exception as e:

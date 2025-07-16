@@ -142,6 +142,44 @@
         .back-btn:hover {
             background: #e65c00;
         }
+        #dailyStatsTable {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: #fff;
+            font-size: 1.05rem;
+            margin-top: 8px;
+        }
+        #dailyStatsTable th, #dailyStatsTable td {
+            padding: 10px 0;
+            border-bottom: 1.5px solid #f2f2f2;
+        }
+        #dailyStatsTable th {
+            background: #FFFAF5;
+            color: #3F3F3F;
+            font-weight: 800;
+            text-align: center;
+            border-bottom: 2.5px solid #FF7710;
+        }
+        #dailyStatsTable td {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+        #dailyStatsTable td.date-col {
+            text-align: left;
+            color: #444;
+            font-weight: 600;
+            padding-left: 12px;
+        }
+        #dailyStatsTable tr:hover {
+            background: #FFF3E5;
+        }
+        #dailyStatsTable td, #dailyStatsTable th {
+            min-width: 90px;
+        }
+        @media (max-width: 900px) {
+            #dailyStatsTable th, #dailyStatsTable td { font-size: 0.95rem; min-width: 60px; padding: 7px 0; }
+        }
         @media (max-width: 768px) {
             .trend-controls {
                 flex-direction: column;
@@ -394,7 +432,7 @@
             data.forEach(row => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${row.date}</td>
+                    <td class="date-col">${row.date}</td>
                     <td>${row['지원완료']}</td>
                     <td>${row['합격']}</td>
                     <td>${row['예비합격']}</td>
