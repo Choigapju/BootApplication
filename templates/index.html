@@ -696,6 +696,34 @@
                 `;
                 tbody.appendChild(tr);
             });
+
+            // 저장 버튼 이벤트 등록
+            document.querySelectorAll('.save-btn').forEach(btn => {
+                btn.onclick = async function() {
+                    const id = btn.getAttribute('data-id');
+                    const row = btn.closest('tr');
+                    const status = row.querySelector('.status-select').value;
+                    const memo = row.querySelector('.memo-input').value;
+                    const card_owned = row.querySelector('.car-select').value;
+                    const considering_reason = row.querySelector('.reason-select').value;
+                    try {
+                        const res = await fetch('/student/update', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({id, status, memo, card_owned, considering_reason})
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                            alert('성공적으로 저장되었습니다.');
+                            fetchStudents();
+                        } else {
+                            alert(data.error || '저장 중 에러가 발생했습니다.');
+                        }
+                    } catch (error) {
+                        alert('저장 중 에러가 발생했습니다.');
+                    }
+                };
+            });
         }
     }
 
