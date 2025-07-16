@@ -153,6 +153,7 @@
         #dailyStatsTable th, #dailyStatsTable td {
             padding: 10px 0;
             border-bottom: 1.5px solid #f2f2f2;
+            text-align: center;
         }
         #dailyStatsTable th {
             background: #FFFAF5;
@@ -161,12 +162,7 @@
             text-align: center;
             border-bottom: 2.5px solid #FF7710;
         }
-        #dailyStatsTable td {
-            text-align: right;
-            font-variant-numeric: tabular-nums;
-        }
         #dailyStatsTable td.date-col {
-            text-align: left;
             color: #444;
             font-weight: 600;
             padding-left: 12px;
@@ -176,6 +172,9 @@
         }
         #dailyStatsTable td, #dailyStatsTable th {
             min-width: 90px;
+        }
+        #dailyStatsTable th:not(:last-child), #dailyStatsTable td:not(:last-child) {
+            border-right: 1.5px solid #f2f2f2;
         }
         @media (max-width: 900px) {
             #dailyStatsTable th, #dailyStatsTable td { font-size: 0.95rem; min-width: 60px; padding: 7px 0; }
