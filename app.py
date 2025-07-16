@@ -558,12 +558,22 @@ def get_daily_trends():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# 날짜 파싱 유틸 함수 추가
+from datetime import datetime, timedelta
+
+def try_parse_date(date_str):
+    for fmt in ('%Y-%m-%d', '%Y-%m-%d %H:%M:%S', '%Y/%m/%d', '%Y.%m.%d'):
+        try:
+            return datetime.strptime(date_str, fmt)
+        except:
+            continue
+    return None
+
 # 주별 지원 완료자 추이 API
 @app.route('/trends/weekly_applications')
 def get_weekly_trends():
     period = request.args.get('period', '30')
     bootcamp = request.args.get('bootcamp', '')
-    from datetime import datetime, timedelta
 
     try:
         query = db.session.query(Student, Bootcamp).join(Bootcamp)
@@ -586,15 +596,14 @@ def get_weekly_trends():
             date_str = (student.created_at_csv or '').strip()
             if not date_str or date_str in ['NaT', 'nan', 'None', ' ']:
                 continue
-            try:
-                date_obj = datetime.strptime(date_str, '%Y-%m-%d')
-                if cutoff_date and date_obj < cutoff_date:
-                    continue
-                week_start = date_obj - timedelta(days=date_obj.weekday())
-                week_key = week_start.strftime('%Y-%m-%d')
-                weekly_counts[week_key] = weekly_counts.get(week_key, 0) + 1
-            except Exception as e:
+            date_obj = try_parse_date(date_str)
+            if not date_obj:
                 continue
+            if cutoff_date and date_obj < cutoff_date:
+                continue
+            week_start = date_obj - timedelta(days=date_obj.weekday())
+            week_key = week_start.strftime('%Y-%m-%d')
+            weekly_counts[week_key] = weekly_counts.get(week_key, 0) + 1
 
         sorted_weeks = sorted(weekly_counts.keys())
         labels = [f"{week}주차" for week in sorted_weeks]
