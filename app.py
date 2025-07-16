@@ -632,6 +632,77 @@ def get_weekly_trends():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# 일자별 지원자 통계표 API
+@app.route('/trends/daily_stats_table')
+def get_daily_stats_table():
+    period = request.args.get('period', '30')
+    bootcamp = request.args.get('bootcamp', '')
+    from datetime import datetime, timedelta
+
+    try:
+        query = db.session.query(Student, Bootcamp).join(Bootcamp)
+        if bootcamp:
+            bootcamp_name, generation = bootcamp.split('||')
+            query = query.filter(Bootcamp.name == bootcamp_name)
+            if generation:
+                query = query.filter(Bootcamp.generation == generation)
+        students = query.all()
+
+        # 기간 필터를 파이썬에서 직접 처리
+        if period != 'all':
+            days = int(period)
+            cutoff_date = datetime.now() - timedelta(days=days)
+        else:
+            cutoff_date = None
+
+        # 날짜별 통계 집계
+        daily_stats = {}
+        for student, bootcamp in students:
+            date_str = (student.created_at_csv or '').strip()
+            if not date_str or date_str in ['NaT', 'nan', 'None', ' ']:
+                continue
+            # 날짜 파싱 (시간 포함 가능)
+            date_obj = None
+            for fmt in ('%Y-%m-%d', '%Y-%m-%d %H:%M:%S', '%Y/%m/%d', '%Y.%m.%d'):
+                try:
+                    date_obj = datetime.strptime(date_str, fmt)
+                    break
+                except:
+                    continue
+            if not date_obj:
+                continue
+            if cutoff_date and date_obj < cutoff_date:
+                continue
+            day = date_obj.strftime('%Y-%m-%d')
+            if day not in daily_stats:
+                daily_stats[day] = {
+                    '지원완료': 0,
+                    '합격': 0,
+                    '예비합격': 0,
+                    '지원취소': 0,
+                    '불합격': 0
+                }
+            daily_stats[day]['지원완료'] += 1
+            if student.status == '합격':
+                daily_stats[day]['합격'] += 1
+            elif student.status == '예비합격':
+                daily_stats[day]['예비합격'] += 1
+            elif student.status == '지원취소':
+                daily_stats[day]['지원취소'] += 1
+            elif student.status == '불합격':
+                daily_stats[day]['불합격'] += 1
+
+        # 날짜순 정렬
+        sorted_days = sorted(daily_stats.keys())
+        result = []
+        for day in sorted_days:
+            row = {'date': day}
+            row.update(daily_stats[day])
+            result.append(row)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()  # 테이블이 없을 때만 생성(데이터는 보존)
