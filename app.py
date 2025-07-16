@@ -563,58 +563,47 @@ def get_daily_trends():
 def get_weekly_trends():
     period = request.args.get('period', '30')
     bootcamp = request.args.get('bootcamp', '')
-    
+    from datetime import datetime, timedelta
+
     try:
-        # 기본 쿼리
         query = db.session.query(Student, Bootcamp).join(Bootcamp)
-        
-        # 부트캠프 필터
         if bootcamp:
             bootcamp_name, generation = bootcamp.split('||')
             query = query.filter(Bootcamp.name == bootcamp_name)
             if generation:
                 query = query.filter(Bootcamp.generation == generation)
-        
-        # 기간 필터
+        students = query.all()
+
+        # 기간 필터를 파이썬에서 직접 처리
         if period != 'all':
             days = int(period)
-            from datetime import datetime, timedelta
             cutoff_date = datetime.now() - timedelta(days=days)
-            query = query.filter(Student.created_at_csv >= cutoff_date.strftime('%Y-%m-%d'))
-        
-        students = query.all()
-        
-        # 주별 집계
+        else:
+            cutoff_date = None
+
         weekly_counts = {}
         for student, bootcamp in students:
-            if student.created_at_csv:
-                try:
-                    # 날짜 파싱
-                    date_str = str(student.created_at_csv).split(' ')[0]
-                    date_obj = datetime.strptime(date_str, '%Y-%m-%d')
-                    
-                    # 주차 계산 (월요일 시작)
-                    week_start = date_obj - timedelta(days=date_obj.weekday())
-                    week_key = week_start.strftime('%Y-%m-%d')
-                    
-                    if week_key in weekly_counts:
-                        weekly_counts[week_key] += 1
-                    else:
-                        weekly_counts[week_key] = 1
-                except:
+            date_str = (student.created_at_csv or '').strip()
+            if not date_str or date_str in ['NaT', 'nan', 'None', ' ']:
+                continue
+            try:
+                date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                if cutoff_date and date_obj < cutoff_date:
                     continue
-        
-        # 주차순 정렬
+                week_start = date_obj - timedelta(days=date_obj.weekday())
+                week_key = week_start.strftime('%Y-%m-%d')
+                weekly_counts[week_key] = weekly_counts.get(week_key, 0) + 1
+            except Exception as e:
+                continue
+
         sorted_weeks = sorted(weekly_counts.keys())
         labels = [f"{week}주차" for week in sorted_weeks]
         data = [weekly_counts[week] for week in sorted_weeks]
-        
-        # 통계 계산
         total = sum(data)
         average = round(total / len(data), 1) if data else 0
         max_count = max(data) if data else 0
         recent = data[-1] if data else 0
-        
+
         return jsonify({
             'labels': labels,
             'datasets': [{
