@@ -161,7 +161,13 @@
         }
         #uploadMessage {
             margin-top: 10px;
+            padding: 12px;
+            border-radius: 8px;
             font-weight: 600;
+            line-height: 1.5;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
         }
         canvas#statusPie {
             background: #fff;
@@ -782,8 +788,23 @@
                 const res = await fetch('/upload', {method: 'POST', body: formData});
                 const data = await res.json();
                 if (res.ok) {
-                    document.getElementById('uploadMessage').innerText = data.message;
+                    let message = data.message;
+                    
+                    // 이메일 변경 감지 결과가 있으면 추가 표시
+                    if (data.email_changes && data.email_changes.length > 0) {
+                        message += `\n\n📧 이메일 변경 감지 (${data.email_changes.length}건):`;
+                        data.email_changes.forEach(change => {
+                            message += `\n• ${change.name}: ${change.old_email} → ${change.new_email}`;
+                            if (change.old_signup_email && change.new_signup_email && change.old_signup_email !== change.new_signup_email) {
+                                message += `\n  (가입이메일: ${change.old_signup_email} → ${change.new_signup_email})`;
+                            }
+                        });
+                        message += '\n\n✅ 이메일이 변경된 지원자는 새로운 지원으로 처리되어 상태가 초기화되었습니다.';
+                    }
+                    
+                    document.getElementById('uploadMessage').innerText = message;
                     document.getElementById('uploadMessage').style.color = 'green';
+                    document.getElementById('uploadMessage').style.whiteSpace = 'pre-line';
                     renderBootcampSelect();
                     fetchStudents();
                     fetchStatusStats();

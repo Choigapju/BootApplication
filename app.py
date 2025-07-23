@@ -173,6 +173,8 @@ def upload_csv():
             # 기존 지원자 찾기 (이름, 전화번호, 이메일(둘 다) 중 하나라도 일치하면)
             candidates = Student.query.filter_by(bootcamp_id=bootcamp.id).all()
             found = None
+            email_changed = False
+            
             for s in candidates:
                 if (
                     s.name == name or
@@ -181,6 +183,10 @@ def upload_csv():
                     (getattr(s, 'signup_email', None) and normalize_email(s.signup_email) == signup_email)
                 ):
                     found = s
+                    # 이메일 변경 여부 확인
+                    if (normalize_email(s.email) != email or 
+                        (getattr(s, 'signup_email', None) and normalize_email(s.signup_email) != signup_email)):
+                        email_changed = True
                     break
 
             status_val = status_map.get(str(row.get('합불상태', '')).strip(), '대상아님')
@@ -190,7 +196,14 @@ def upload_csv():
             if found and found.status == 'HRD최종등록':
                 should_add = False  # 기존 데이터 유지, 새로 추가하지 않음
 
-            # 2. 그 외에는 기존 지원자 삭제 후 새로 추가
+            # 2. 이메일이 변경된 경우: 새로운 지원으로 간주하여 상태 초기화
+            elif found and email_changed:
+                print(f"이메일 변경 감지: {found.name} - 기존: {found.email}, 새: {email}")
+                db.session.delete(found)
+                # 이메일 변경 시 상태를 '대상아님'으로 초기화 (새로운 지원)
+                status_val = '대상아님'
+
+            # 3. 그 외에는 기존 지원자 삭제 후 새로 추가
             elif found:
                 db.session.delete(found)
 
@@ -218,7 +231,34 @@ def upload_csv():
                 )
                 db.session.add(student)
         db.session.commit()
-        return jsonify({'message': '업로드 및 저장 완료'})
+        
+        # 이메일 변경 감지 로그 추가
+        email_change_log = []
+        for _, row in df.iterrows():
+            email = normalize_email(row.get('지원서 이메일', ''))
+            signup_email = normalize_email(row.get('가입 이메일', ''))
+            name = row.get('가입 이름', '').strip()
+            
+            # 기존 데이터에서 이메일 변경 확인
+            existing = Student.query.filter_by(
+                bootcamp_id=bootcamp.id,
+                name=name
+            ).first()
+            
+            if existing and (normalize_email(existing.email) != email or 
+                           (getattr(existing, 'signup_email', None) and normalize_email(existing.signup_email) != signup_email)):
+                email_change_log.append({
+                    'name': name,
+                    'old_email': existing.email,
+                    'new_email': email,
+                    'old_signup_email': getattr(existing, 'signup_email', ''),
+                    'new_signup_email': signup_email
+                })
+        
+        return jsonify({
+            'message': '업로드 및 저장 완료',
+            'email_changes': email_change_log
+        })
     except Exception as e:
         db.session.rollback()
         print("전체 에러:", str(e))
