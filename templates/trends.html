@@ -179,10 +179,64 @@
         @media (max-width: 900px) {
             #dailyStatsTable th, #dailyStatsTable td { font-size: 0.95rem; min-width: 60px; padding: 7px 0; }
         }
+        .compare-controls {
+            background: var(--main-bg);
+            border: 2px solid var(--main-orange);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        .compare-selectors {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 16px;
+        }
+        .compare-selector {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .compare-selector label {
+            font-weight: 700;
+            color: var(--main-dark);
+            font-size: 0.95rem;
+        }
+        .compare-selector select {
+            width: 100%;
+            border: 1.5px solid var(--main-orange);
+            border-radius: 8px;
+            padding: 10px 12px;
+            background: var(--main-white);
+            color: var(--main-dark);
+            font-size: 1rem;
+        }
+        .compare-btn {
+            background: var(--main-orange);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1rem;
+        }
+        .compare-btn:hover {
+            background: #e65c00;
+        }
+        .compare-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
         @media (max-width: 768px) {
             .trend-controls {
                 flex-direction: column;
                 align-items: stretch;
+            }
+            .compare-selectors {
+                grid-template-columns: 1fr;
+                gap: 16px;
             }
             .section {
                 padding: 20px 4vw;
@@ -207,6 +261,7 @@
         <div class="trend-controls">
             <button class="tab-btn active" data-tab="daily">일별 추이</button>
             <button class="tab-btn" data-tab="weekly">주별 추이</button>
+            <button class="tab-btn" data-tab="compare">부트캠프 비교</button>
             <button class="tab-btn" data-tab="table">일자별 통계표</button>
             <select id="periodFilter">
                 <option value="7">최근 7일</option>
@@ -217,6 +272,25 @@
             <select id="bootcampFilter">
                 <option value="">전체 부트캠프</option>
             </select>
+        </div>
+        
+        <!-- 부트캠프 비교 컨트롤 -->
+        <div class="compare-controls" id="compareControls" style="display:none;">
+            <div class="compare-selectors">
+                <div class="compare-selector">
+                    <label>첫 번째 부트캠프:</label>
+                    <select id="bootcamp1Filter">
+                        <option value="">선택하세요</option>
+                    </select>
+                </div>
+                <div class="compare-selector">
+                    <label>두 번째 부트캠프:</label>
+                    <select id="bootcamp2Filter">
+                        <option value="">선택하세요</option>
+                    </select>
+                </div>
+            </div>
+            <button class="compare-btn" id="compareBtn">비교하기</button>
         </div>
         
         <div class="stats-summary" id="statsSummary">
@@ -273,12 +347,22 @@
                     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
                     this.classList.add('active');
                     currentTab = this.getAttribute('data-tab');
-                    if(currentTab === 'table') {
+                    
+                    // 비교 컨트롤 표시/숨김
+                    if(currentTab === 'compare') {
+                        document.getElementById('compareControls').style.display = '';
+                        document.getElementById('chartContainer').style.display = '';
+                        document.getElementById('statsSummary').style.display = 'none';
+                        document.getElementById('tableContainer').style.display = 'none';
+                        loadCompareBootcampOptions();
+                    } else if(currentTab === 'table') {
+                        document.getElementById('compareControls').style.display = 'none';
                         document.getElementById('chartContainer').style.display = 'none';
                         document.getElementById('statsSummary').style.display = 'none';
                         document.getElementById('tableContainer').style.display = '';
                         fetchDailyStatsTable();
                     } else {
+                        document.getElementById('compareControls').style.display = 'none';
                         document.getElementById('chartContainer').style.display = '';
                         document.getElementById('statsSummary').style.display = '';
                         document.getElementById('tableContainer').style.display = 'none';
@@ -289,11 +373,18 @@
             // 필터 변경 이벤트
             document.getElementById('periodFilter').addEventListener('change', function() {
                 if(currentTab === 'table') fetchDailyStatsTable();
+                else if(currentTab === 'compare') fetchCompareData();
                 else fetchTrends();
             });
             document.getElementById('bootcampFilter').addEventListener('change', function() {
                 if(currentTab === 'table') fetchDailyStatsTable();
+                else if(currentTab === 'compare') fetchCompareData();
                 else fetchTrends();
+            });
+            
+            // 비교하기 버튼 이벤트
+            document.getElementById('compareBtn').addEventListener('click', function() {
+                fetchCompareData();
             });
         });
         
@@ -323,6 +414,45 @@
             }
         }
         
+        // 비교용 부트캠프 옵션 로드
+        async function loadCompareBootcampOptions() {
+            try {
+                const res = await fetch('/bootcamps');
+                const data = await res.json();
+                const select1 = document.getElementById('bootcamp1Filter');
+                const select2 = document.getElementById('bootcamp2Filter');
+                
+                // 기존 옵션 제거 (첫 번째 옵션 제외)
+                select1.innerHTML = '<option value="">선택하세요</option>';
+                select2.innerHTML = '<option value="">선택하세요</option>';
+                
+                const unique = Array.from(new Set(data.map(b => b.name + '||' + b.generation)))
+                    .map(str => {
+                        const [name, generation] = str.split('||');
+                        return {name, generation};
+                    });
+                
+                unique.forEach(b => {
+                    const label = b.name + (b.generation ? ' / ' + b.generation : '');
+                    const value = b.name + '||' + b.generation;
+                    
+                    // 첫 번째 부트캠프 옵션
+                    const opt1 = document.createElement('option');
+                    opt1.value = value;
+                    opt1.innerText = label;
+                    select1.appendChild(opt1);
+                    
+                    // 두 번째 부트캠프 옵션
+                    const opt2 = document.createElement('option');
+                    opt2.value = value;
+                    opt2.innerText = label;
+                    select2.appendChild(opt2);
+                });
+            } catch (error) {
+                console.error('비교 부트캠프 로드 실패:', error);
+            }
+        }
+        
         // 추이 데이터 가져오기
         async function fetchTrends() {
             const period = document.getElementById('periodFilter').value;
@@ -341,6 +471,34 @@
                     updateStats(data);
                 } else {
                     console.error('데이터 로드 실패:', data.error);
+                }
+            } catch (error) {
+                console.error('네트워크 오류:', error);
+            }
+        }
+        
+        // 비교 데이터 가져오기
+        async function fetchCompareData() {
+            const period = document.getElementById('periodFilter').value;
+            const bootcamp1 = document.getElementById('bootcamp1Filter').value;
+            const bootcamp2 = document.getElementById('bootcamp2Filter').value;
+            
+            // 최소 하나의 부트캠프는 선택되어야 함
+            if (!bootcamp1 && !bootcamp2) {
+                alert('최소 하나의 부트캠프를 선택해주세요.');
+                return;
+            }
+            
+            try {
+                const url = `/trends/compare_bootcamps?period=${period}&bootcamp1=${encodeURIComponent(bootcamp1)}&bootcamp2=${encodeURIComponent(bootcamp2)}&type=${currentTab === 'daily' ? 'daily' : 'weekly'}`;
+                
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                if (res.ok) {
+                    renderCompareChart(data);
+                } else {
+                    console.error('비교 데이터 로드 실패:', data.error);
                 }
             } catch (error) {
                 console.error('네트워크 오류:', error);
@@ -371,6 +529,51 @@
                         title: {
                             display: true,
                             text: currentTab === 'daily' ? '일별 지원 완료자 추이' : '주별 지원 완료자 추이',
+                            font: {
+                                size: 16,
+                                weight: 'bold'
+                            }
+                        },
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 비교 차트 렌더링
+        function renderCompareChart(data) {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            
+            if (currentChart) {
+                currentChart.destroy();
+            }
+            
+            const labels = data.labels || [];
+            const datasets = data.datasets || [];
+            
+            currentChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: currentTab === 'daily' ? '부트캠프별 일별 지원 완료자 비교' : '부트캠프별 주별 지원 완료자 비교',
                             font: {
                                 size: 16,
                                 weight: 'bold'

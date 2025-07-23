@@ -709,6 +709,142 @@ def get_daily_stats_table():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# 부트캠프 비교 API
+@app.route('/trends/compare_bootcamps')
+def compare_bootcamps():
+    period = request.args.get('period', '30')
+    bootcamp1 = request.args.get('bootcamp1', '')
+    bootcamp2 = request.args.get('bootcamp2', '')
+    trend_type = request.args.get('type', 'daily')  # daily 또는 weekly
+    
+    from datetime import datetime, timedelta
+    
+    try:
+        # 기간 필터 설정
+        if period != 'all':
+            days = int(period)
+            cutoff_date = datetime.now() - timedelta(days=days)
+        else:
+            cutoff_date = None
+        
+        datasets = []
+        colors = ['#FF7710', '#6EC6FF', '#FF6B6B', '#4ECDC4', '#45B7D1']
+        
+        # 첫 번째 부트캠프 데이터
+        if bootcamp1:
+            data1 = get_bootcamp_trend_data(bootcamp1, cutoff_date, trend_type)
+            if data1:
+                datasets.append({
+                    'label': bootcamp1.replace('||', ' / '),
+                    'data': data1['data'],
+                    'labels': data1['labels'],
+                    'borderColor': colors[0],
+                    'backgroundColor': colors[0].replace(')', ', 0.1)').replace('rgb', 'rgba'),
+                    'tension': 0.1
+                })
+        
+        # 두 번째 부트캠프 데이터
+        if bootcamp2:
+            data2 = get_bootcamp_trend_data(bootcamp2, cutoff_date, trend_type)
+            if data2:
+                datasets.append({
+                    'label': bootcamp2.replace('||', ' / '),
+                    'data': data2['data'],
+                    'labels': data2['labels'],
+                    'borderColor': colors[1],
+                    'backgroundColor': colors[1].replace(')', ', 0.1)').replace('rgb', 'rgba'),
+                    'tension': 0.1
+                })
+        
+        # 공통 라벨 생성 (날짜 범위)
+        all_labels = set()
+        for dataset in datasets:
+            if 'labels' in dataset:
+                all_labels.update(dataset['labels'])
+        
+        labels = sorted(list(all_labels)) if all_labels else []
+        
+        # 각 데이터셋의 데이터를 라벨에 맞게 정렬
+        for dataset in datasets:
+            if 'labels' in dataset:
+                # 라벨과 데이터를 매칭하여 정렬된 데이터 생성
+                label_data_map = dict(zip(dataset['labels'], dataset['data']))
+                dataset['data'] = [label_data_map.get(label, 0) for label in labels]
+                del dataset['labels']  # labels는 별도로 전송
+        
+        return jsonify({
+            'labels': labels,
+            'datasets': datasets
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+def get_bootcamp_trend_data(bootcamp_filter, cutoff_date, trend_type):
+    """부트캠프별 트렌드 데이터를 가져오는 헬퍼 함수"""
+    try:
+        query = db.session.query(Student, Bootcamp).join(Bootcamp)
+        
+        if bootcamp_filter:
+            bootcamp_name, generation = bootcamp_filter.split('||')
+            query = query.filter(Bootcamp.name == bootcamp_name)
+            if generation:
+                query = query.filter(Bootcamp.generation == generation)
+        
+        students = query.all()
+        
+        if trend_type == 'daily':
+            # 일별 집계
+            daily_counts = {}
+            for student, bootcamp in students:
+                if student.created_at_csv:
+                    try:
+                        date_str = str(student.created_at_csv).split(' ')[0]
+                        if cutoff_date:
+                            date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                            if date_obj < cutoff_date:
+                                continue
+                        if date_str in daily_counts:
+                            daily_counts[date_str] += 1
+                        else:
+                            daily_counts[date_str] = 1
+                    except:
+                        continue
+            
+            sorted_dates = sorted(daily_counts.keys())
+            return {
+                'labels': sorted_dates,
+                'data': [daily_counts[date] for date in sorted_dates]
+            }
+        
+        elif trend_type == 'weekly':
+            # 주별 집계
+            weekly_counts = {}
+            for student, bootcamp in students:
+                date_str = (student.created_at_csv or '').strip()
+                if not date_str or date_str in ['NaT', 'nan', 'None', ' ']:
+                    continue
+                date_obj = try_parse_date(date_str)
+                if not date_obj:
+                    continue
+                if cutoff_date and date_obj < cutoff_date:
+                    continue
+                week_start = date_obj - timedelta(days=date_obj.weekday())
+                week_key = week_start.strftime('%Y-%m-%d')
+                weekly_counts[week_key] = weekly_counts.get(week_key, 0) + 1
+            
+            sorted_weeks = sorted(weekly_counts.keys())
+            return {
+                'labels': [f"{week}주차" for week in sorted_weeks],
+                'data': [weekly_counts[week] for week in sorted_weeks]
+            }
+        
+        return None
+        
+    except Exception as e:
+        print(f"부트캠프 데이터 가져오기 오류: {e}")
+        return None
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()  # 테이블이 없을 때만 생성(데이터는 보존)
