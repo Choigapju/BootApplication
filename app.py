@@ -716,6 +716,7 @@ def compare_bootcamps():
     bootcamp1 = request.args.get('bootcamp1', '')
     bootcamp2 = request.args.get('bootcamp2', '')
     trend_type = request.args.get('type', 'daily')  # daily 또는 weekly
+    compare_mode = request.args.get('mode', 'date')  # date 또는 week_number
     
     from datetime import datetime, timedelta
     
@@ -732,7 +733,7 @@ def compare_bootcamps():
         
         # 첫 번째 부트캠프 데이터
         if bootcamp1:
-            data1 = get_bootcamp_trend_data(bootcamp1, cutoff_date, trend_type)
+            data1 = get_bootcamp_trend_data(bootcamp1, cutoff_date, trend_type, compare_mode)
             if data1:
                 datasets.append({
                     'label': bootcamp1.replace('||', ' / '),
@@ -745,7 +746,7 @@ def compare_bootcamps():
         
         # 두 번째 부트캠프 데이터
         if bootcamp2:
-            data2 = get_bootcamp_trend_data(bootcamp2, cutoff_date, trend_type)
+            data2 = get_bootcamp_trend_data(bootcamp2, cutoff_date, trend_type, compare_mode)
             if data2:
                 datasets.append({
                     'label': bootcamp2.replace('||', ' / '),
@@ -756,21 +757,36 @@ def compare_bootcamps():
                     'tension': 0.1
                 })
         
-        # 공통 라벨 생성 (날짜 범위)
-        all_labels = set()
-        for dataset in datasets:
-            if 'labels' in dataset:
-                all_labels.update(dataset['labels'])
-        
-        labels = sorted(list(all_labels)) if all_labels else []
-        
-        # 각 데이터셋의 데이터를 라벨에 맞게 정렬
-        for dataset in datasets:
-            if 'labels' in dataset:
-                # 라벨과 데이터를 매칭하여 정렬된 데이터 생성
-                label_data_map = dict(zip(dataset['labels'], dataset['data']))
-                dataset['data'] = [label_data_map.get(label, 0) for label in labels]
-                del dataset['labels']  # labels는 별도로 전송
+        # 공통 라벨 생성
+        if compare_mode == 'week_number':
+            # 주차별 비교 모드: 1주차, 2주차...로 통일
+            all_week_numbers = set()
+            for dataset in datasets:
+                if 'labels' in dataset:
+                    all_week_numbers.update(dataset['labels'])
+            
+            labels = sorted(list(all_week_numbers), key=lambda x: int(x.replace('주차', ''))) if all_week_numbers else []
+            
+            # 각 데이터셋의 데이터를 주차에 맞게 정렬
+            for dataset in datasets:
+                if 'labels' in dataset:
+                    label_data_map = dict(zip(dataset['labels'], dataset['data']))
+                    dataset['data'] = [label_data_map.get(label, 0) for label in labels]
+                    del dataset['labels']
+        else:
+            # 기존 날짜별 비교 모드
+            all_labels = set()
+            for dataset in datasets:
+                if 'labels' in dataset:
+                    all_labels.update(dataset['labels'])
+            
+            labels = sorted(list(all_labels)) if all_labels else []
+            
+            for dataset in datasets:
+                if 'labels' in dataset:
+                    label_data_map = dict(zip(dataset['labels'], dataset['data']))
+                    dataset['data'] = [label_data_map.get(label, 0) for label in labels]
+                    del dataset['labels']
         
         return jsonify({
             'labels': labels,
@@ -780,7 +796,7 @@ def compare_bootcamps():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-def get_bootcamp_trend_data(bootcamp_filter, cutoff_date, trend_type):
+def get_bootcamp_trend_data(bootcamp_filter, cutoff_date, trend_type, compare_mode='date'):
     """부트캠프별 트렌드 데이터를 가져오는 헬퍼 함수"""
     try:
         query = db.session.query(Student, Bootcamp).join(Bootcamp)
@@ -794,55 +810,121 @@ def get_bootcamp_trend_data(bootcamp_filter, cutoff_date, trend_type):
         students = query.all()
         
         if trend_type == 'daily':
-            # 일별 집계
-            daily_counts = {}
-            for student, bootcamp in students:
-                if student.created_at_csv:
-                    try:
-                        date_str = str(student.created_at_csv).split(' ')[0]
-                        if cutoff_date:
-                            date_obj = datetime.strptime(date_str, '%Y-%m-%d')
-                            if date_obj < cutoff_date:
-                                continue
-                        if date_str in daily_counts:
-                            daily_counts[date_str] += 1
-                        else:
-                            daily_counts[date_str] = 1
-                    except:
-                        continue
-            
-            sorted_dates = sorted(daily_counts.keys())
-            return {
-                'labels': sorted_dates,
-                'data': [daily_counts[date] for date in sorted_dates]
-            }
+            if compare_mode == 'week_number':
+                # 주차별 비교 모드: 각 부트캠프의 모집 시작일 기준으로 주차 계산
+                return get_weekly_comparison_data(students, cutoff_date)
+            else:
+                # 기존 일별 집계
+                daily_counts = {}
+                for student, bootcamp in students:
+                    if student.created_at_csv:
+                        try:
+                            date_str = str(student.created_at_csv).split(' ')[0]
+                            if cutoff_date:
+                                date_obj = datetime.strptime(date_str, '%Y-%m-%d')
+                                if date_obj < cutoff_date:
+                                    continue
+                            if date_str in daily_counts:
+                                daily_counts[date_str] += 1
+                            else:
+                                daily_counts[date_str] = 1
+                        except:
+                            continue
+                
+                sorted_dates = sorted(daily_counts.keys())
+                return {
+                    'labels': sorted_dates,
+                    'data': [daily_counts[date] for date in sorted_dates]
+                }
         
         elif trend_type == 'weekly':
-            # 주별 집계
-            weekly_counts = {}
-            for student, bootcamp in students:
-                date_str = (student.created_at_csv or '').strip()
-                if not date_str or date_str in ['NaT', 'nan', 'None', ' ']:
-                    continue
-                date_obj = try_parse_date(date_str)
-                if not date_obj:
-                    continue
-                if cutoff_date and date_obj < cutoff_date:
-                    continue
-                week_start = date_obj - timedelta(days=date_obj.weekday())
-                week_key = week_start.strftime('%Y-%m-%d')
-                weekly_counts[week_key] = weekly_counts.get(week_key, 0) + 1
-            
-            sorted_weeks = sorted(weekly_counts.keys())
-            return {
-                'labels': [f"{week}주차" for week in sorted_weeks],
-                'data': [weekly_counts[week] for week in sorted_weeks]
-            }
+            if compare_mode == 'week_number':
+                # 주차별 비교 모드: 각 부트캠프의 모집 시작일 기준으로 주차 계산
+                return get_weekly_comparison_data(students, cutoff_date)
+            else:
+                # 기존 주별 집계
+                weekly_counts = {}
+                for student, bootcamp in students:
+                    date_str = (student.created_at_csv or '').strip()
+                    if not date_str or date_str in ['NaT', 'nan', 'None', ' ']:
+                        continue
+                    date_obj = try_parse_date(date_str)
+                    if not date_obj:
+                        continue
+                    if cutoff_date and date_obj < cutoff_date:
+                        continue
+                    week_start = date_obj - timedelta(days=date_obj.weekday())
+                    week_key = week_start.strftime('%Y-%m-%d')
+                    weekly_counts[week_key] = weekly_counts.get(week_key, 0) + 1
+                
+                sorted_weeks = sorted(weekly_counts.keys())
+                return {
+                    'labels': [f"{week}주차" for week in sorted_weeks],
+                    'data': [weekly_counts[week] for week in sorted_weeks]
+                }
         
         return None
         
     except Exception as e:
         print(f"부트캠프 데이터 가져오기 오류: {e}")
+        return None
+
+def get_weekly_comparison_data(students, cutoff_date):
+    """주차별 비교를 위한 데이터 생성"""
+    try:
+        # 각 부트캠프의 첫 번째 지원일을 찾아서 기준일로 설정
+        first_dates = {}
+        for student, bootcamp in students:
+            date_str = (student.created_at_csv or '').strip()
+            if not date_str or date_str in ['NaT', 'nan', 'None', ' ']:
+                continue
+            date_obj = try_parse_date(date_str)
+            if not date_obj:
+                continue
+            if cutoff_date and date_obj < cutoff_date:
+                continue
+            
+            bootcamp_key = f"{bootcamp.name}_{bootcamp.generation}"
+            if bootcamp_key not in first_dates or date_obj < first_dates[bootcamp_key]:
+                first_dates[bootcamp_key] = date_obj
+        
+        if not first_dates:
+            return None
+        
+        # 각 부트캠프별로 주차별 데이터 집계
+        weekly_data = {}
+        for student, bootcamp in students:
+            date_str = (student.created_at_csv or '').strip()
+            if not date_str or date_str in ['NaT', 'nan', 'None', ' ']:
+                continue
+            date_obj = try_parse_date(date_str)
+            if not date_obj:
+                continue
+            if cutoff_date and date_obj < cutoff_date:
+                continue
+            
+            bootcamp_key = f"{bootcamp.name}_{bootcamp.generation}"
+            if bootcamp_key not in first_dates:
+                continue
+            
+            # 첫 번째 지원일로부터 몇 주차인지 계산
+            start_date = first_dates[bootcamp_key]
+            days_diff = (date_obj - start_date).days
+            week_number = (days_diff // 7) + 1  # 1주차부터 시작
+            
+            if week_number not in weekly_data:
+                weekly_data[week_number] = 0
+            weekly_data[week_number] += 1
+        
+        # 주차순으로 정렬
+        sorted_weeks = sorted(weekly_data.keys())
+        return {
+            'labels': [f"{week}주차" for week in sorted_weeks],
+            'data': [weekly_data[week] for week in sorted_weeks]
+        }
+        
+    except Exception as e:
+        print(f"주차별 비교 데이터 생성 오류: {e}")
         return None
 
 if __name__ == '__main__':

@@ -186,6 +186,47 @@
             padding: 20px;
             margin-bottom: 24px;
         }
+        .compare-mode-selector {
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .compare-mode-selector label {
+            font-weight: 700;
+            color: var(--main-dark);
+            font-size: 1rem;
+            margin-bottom: 12px;
+            display: block;
+        }
+        .mode-buttons {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        .mode-btn {
+            background: var(--main-white);
+            color: var(--main-dark);
+            border: 2px solid var(--main-orange);
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+        .mode-btn.active {
+            background: var(--main-orange);
+            color: white;
+        }
+        .mode-btn:hover {
+            background: var(--main-orange);
+            color: white;
+        }
+        .mode-description {
+            font-size: 0.85rem;
+            color: #666;
+            font-style: italic;
+        }
         .compare-selectors {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -276,6 +317,15 @@
         
         <!-- 부트캠프 비교 컨트롤 -->
         <div class="compare-controls" id="compareControls" style="display:none;">
+            <div class="compare-mode-selector">
+                <label>비교 모드:</label>
+                <div class="mode-buttons">
+                    <button class="mode-btn" data-mode="week_number">주차별 비교</button>
+                </div>
+                <div class="mode-description">
+                    <span id="modeDescription">날짜별 비교: 실제 날짜 기준으로 비교</span>
+                </div>
+            </div>
             <div class="compare-selectors">
                 <div class="compare-selector">
                     <label>첫 번째 부트캠프:</label>
@@ -386,7 +436,28 @@
             document.getElementById('compareBtn').addEventListener('click', function() {
                 fetchCompareData();
             });
+            
+            // 비교 모드 버튼 이벤트
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    updateModeDescription();
+                });
+            });
         });
+        
+        // 비교 모드 설명 업데이트
+        function updateModeDescription() {
+            const activeMode = document.querySelector('.mode-btn.active').getAttribute('data-mode');
+            const description = document.getElementById('modeDescription');
+            
+            if (activeMode === 'date') {
+                description.textContent = '날짜별 비교: 실제 날짜 기준으로 비교';
+            } else {
+                description.textContent = '주차별 비교: 각 부트캠프의 모집 시작일을 1주차로 하여 비교';
+            }
+        }
         
         // 부트캠프 옵션 로드
         async function loadBootcampOptions() {
@@ -482,6 +553,7 @@
             const period = document.getElementById('periodFilter').value;
             const bootcamp1 = document.getElementById('bootcamp1Filter').value;
             const bootcamp2 = document.getElementById('bootcamp2Filter').value;
+            const compareMode = document.querySelector('.mode-btn.active').getAttribute('data-mode');
             
             // 최소 하나의 부트캠프는 선택되어야 함
             if (!bootcamp1 && !bootcamp2) {
@@ -490,7 +562,7 @@
             }
             
             try {
-                const url = `/trends/compare_bootcamps?period=${period}&bootcamp1=${encodeURIComponent(bootcamp1)}&bootcamp2=${encodeURIComponent(bootcamp2)}&type=${currentTab === 'daily' ? 'daily' : 'weekly'}`;
+                const url = `/trends/compare_bootcamps?period=${period}&bootcamp1=${encodeURIComponent(bootcamp1)}&bootcamp2=${encodeURIComponent(bootcamp2)}&type=${currentTab === 'daily' ? 'daily' : 'weekly'}&mode=${compareMode}`;
                 
                 const res = await fetch(url);
                 const data = await res.json();
@@ -560,6 +632,14 @@
             
             const labels = data.labels || [];
             const datasets = data.datasets || [];
+            const compareMode = document.querySelector('.mode-btn.active').getAttribute('data-mode');
+            
+            let titleText = '';
+            if (compareMode === 'week_number') {
+                titleText = currentTab === 'daily' ? '부트캠프별 주차별 지원 완료자 비교 (모집 시작일 기준)' : '부트캠프별 주차별 지원 완료자 비교 (모집 시작일 기준)';
+            } else {
+                titleText = currentTab === 'daily' ? '부트캠프별 일별 지원 완료자 비교' : '부트캠프별 주별 지원 완료자 비교';
+            }
             
             currentChart = new Chart(ctx, {
                 type: 'line',
@@ -573,7 +653,7 @@
                     plugins: {
                         title: {
                             display: true,
-                            text: currentTab === 'daily' ? '부트캠프별 일별 지원 완료자 비교' : '부트캠프별 주별 지원 완료자 비교',
+                            text: titleText,
                             font: {
                                 size: 16,
                                 weight: 'bold'
