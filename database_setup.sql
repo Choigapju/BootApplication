@@ -30,8 +30,20 @@ CREATE TABLE students (
     programming_skills TEXT
 );
 
+-- 이벤트 코멘트 테이블 추가
+CREATE TABLE event_comments (
+    id SERIAL PRIMARY KEY,
+    date DATE NOT NULL,
+    comment TEXT NOT NULL,
+    bootcamp_filter VARCHAR(200),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- 인덱스 생성
 CREATE INDEX idx_students_user_id ON students(user_id);
 CREATE INDEX idx_students_bootcamp_id ON students(bootcamp_id);
 CREATE INDEX idx_students_application_date ON students(application_date);
 CREATE INDEX idx_bootcamps_batch_number ON bootcamps(batch_number);
+CREATE INDEX idx_event_comments_date ON event_comments(date);
+CREATE INDEX idx_event_comments_bootcamp ON event_comments(bootcamp_filter);

@@ -46,6 +46,15 @@ class Student(db.Model):
     created_at_csv = db.Column(db.String(30))  # 또는 db.DateTime
     signup_email = db.Column(db.String(100))  # 가입 이메일 추가
 
+class EventComment(db.Model):
+    __tablename__ = 'event_comments'
+    id = db.Column(db.Integer, primary_key=True)
+    date = db.Column(db.Date, nullable=False)
+    comment = db.Column(db.Text, nullable=False)
+    bootcamp_filter = db.Column(db.String(200))
+    created_at = db.Column(db.DateTime, default=db.func.now())
+    updated_at = db.Column(db.DateTime, default=db.func.now(), onupdate=db.func.now())
+
 def safe_str(val):
     # NaN, None, float('nan') 모두 ''로 변환
     if val is None:
@@ -966,6 +975,92 @@ def get_weekly_comparison_data(students, cutoff_date):
     except Exception as e:
         print(f"주차별 비교 데이터 생성 오류: {e}")
         return None
+
+# 이벤트 코멘트 관련 API
+@app.route('/event_comments', methods=['GET'])
+def get_event_comments():
+    """특정 기간의 이벤트 코멘트 조회"""
+    try:
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        bootcamp_filter = request.args.get('bootcamp_filter', '')
+        
+        query = EventComment.query
+        
+        if start_date:
+            query = query.filter(EventComment.date >= start_date)
+        if end_date:
+            query = query.filter(EventComment.date <= end_date)
+        if bootcamp_filter:
+            query = query.filter(EventComment.bootcamp_filter == bootcamp_filter)
+        
+        comments = query.order_by(EventComment.date.desc()).all()
+        
+        return jsonify([{
+            'id': comment.id,
+            'date': comment.date.strftime('%Y-%m-%d'),
+            'comment': comment.comment,
+            'bootcamp_filter': comment.bootcamp_filter,
+            'created_at': comment.created_at.strftime('%Y-%m-%d %H:%M:%S')
+        } for comment in comments])
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/event_comments', methods=['POST'])
+def create_event_comment():
+    """이벤트 코멘트 생성"""
+    try:
+        data = request.get_json()
+        date = data.get('date')
+        comment = data.get('comment')
+        bootcamp_filter = data.get('bootcamp_filter', '')
+        
+        if not date or not comment:
+            return jsonify({'error': '날짜와 코멘트는 필수입니다.'}), 400
+        
+        # 기존 코멘트가 있는지 확인
+        existing_comment = EventComment.query.filter_by(
+            date=date, 
+            bootcamp_filter=bootcamp_filter
+        ).first()
+        
+        if existing_comment:
+            # 기존 코멘트 업데이트
+            existing_comment.comment = comment
+            existing_comment.updated_at = db.func.now()
+            db.session.commit()
+            return jsonify({'message': '코멘트가 업데이트되었습니다.', 'id': existing_comment.id})
+        else:
+            # 새 코멘트 생성
+            new_comment = EventComment(
+                date=date,
+                comment=comment,
+                bootcamp_filter=bootcamp_filter
+            )
+            db.session.add(new_comment)
+            db.session.commit()
+            return jsonify({'message': '코멘트가 생성되었습니다.', 'id': new_comment.id})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/event_comments/<int:comment_id>', methods=['DELETE'])
+def delete_event_comment(comment_id):
+    """이벤트 코멘트 삭제"""
+    try:
+        comment = EventComment.query.get(comment_id)
+        if not comment:
+            return jsonify({'error': '코멘트를 찾을 수 없습니다.'}), 404
+        
+        db.session.delete(comment)
+        db.session.commit()
+        return jsonify({'message': '코멘트가 삭제되었습니다.'})
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     with app.app_context():
