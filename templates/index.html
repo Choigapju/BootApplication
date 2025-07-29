@@ -140,6 +140,40 @@
             white-space: nowrap;
         }
         
+        /* 이름과 이메일 컬럼 너비 제한 */
+        th:nth-child(3), td:nth-child(3) { /* 이름 */
+            max-width: 70px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        th:nth-child(4), td:nth-child(4) { /* 이메일 */
+            max-width: 150px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: normal;
+            word-break: break-all;
+            position: relative;
+        }
+        
+        /* 이메일 셀에 툴팁 추가 */
+        th:nth-child(4):hover::after,
+        td:nth-child(4):hover::after {
+            content: attr(title);
+            position: absolute;
+            left: 0;
+            top: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+            max-width: 300px;
+            z-index: 1000;
+            pointer-events: none;
+        }
+        
 
         th {
             background: var(--main-bg);
@@ -674,7 +708,7 @@
                     <td>${s.bootcamp || ''}</td>
                     <td>${s.generation || ''}</td>
                     <td>${s.name || ''}</td>
-                    <td>
+                    <td title="가입: ${s.signup_email || '-'}\n지원서: ${s.email || '-'}">
                         가입: ${s.signup_email || '-'}<br>
                         지원서: ${s.email || '-'}
                     </td>
