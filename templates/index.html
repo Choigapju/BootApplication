@@ -84,43 +84,9 @@
             background: #e65c00;
         }
         
-        /* 저장 버튼 스타일 개선 */
         .save-btn {
             min-width: 60px;
             white-space: nowrap;
-            background: var(--main-orange);
-            border: none;
-            border-radius: 6px;
-            padding: 6px 12px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            color: white;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 2px 4px rgba(255, 119, 16, 0.3);
-        }
-        
-        .save-btn:hover {
-            background: #e65c00;
-            box-shadow: 0 4px 8px rgba(255, 119, 16, 0.4);
-            transform: translateY(-1px);
-        }
-        
-        .save-btn:active {
-            transform: translateY(0);
-            box-shadow: 0 2px 4px rgba(255, 119, 16, 0.3);
-        }
-        
-        /* 전체 저장 버튼 특별 스타일 */
-        #saveAllBtn {
-            background: linear-gradient(135deg, var(--main-orange), #e65c00);
-            font-weight: 700;
-            box-shadow: 0 4px 12px rgba(255, 119, 16, 0.3);
-        }
-        
-        #saveAllBtn:hover {
-            background: linear-gradient(135deg, #e65c00, #d45500);
-            box-shadow: 0 6px 16px rgba(255, 119, 16, 0.4);
         }
         .delete-btn {
             background: #fff;
@@ -158,69 +124,23 @@
             max-width: 100vw;
             overflow-x: auto;
             margin: 0 -3vw; /* 좌우 여백 없애기 */
-            position: relative;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         
-        /* 스크롤바 스타일링 */
-        .table-wrap::-webkit-scrollbar {
-            height: 8px;
-        }
-        
-        .table-wrap::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 4px;
-        }
-        
-        .table-wrap::-webkit-scrollbar-thumb {
-            background: var(--main-orange);
-            border-radius: 4px;
-        }
-        
-        .table-wrap::-webkit-scrollbar-thumb:hover {
-            background: #e65c00;
-        }
+
         table {
             width: 100%;
-            min-width: 1200px;
+            min-width: 900px;
             background: var(--main-white);
             margin-bottom: 16px;
-            table-layout: auto; /* 자동 레이아웃으로 변경하여 더 자연스럽게 */
-            border-collapse: collapse;
-            border-radius: 8px;
-            overflow: hidden;
+            table-layout: auto;
         }
         th, td {
-            padding: 12px 8px;
+            padding: 10px 8px;
             text-align: center;
             white-space: nowrap;
-            border-bottom: 1px solid #f0f0f0;
         }
         
-        /* 짝수 행 배경색 */
-        tr:nth-child(even) {
-            background-color: #fafafa;
-        }
-        
-        /* 마지막 행 테두리 제거 */
-        tr:last-child td {
-            border-bottom: none;
-        }
-        
-        /* 컬럼별 최소 너비 설정 */
-        th:nth-child(1), td:nth-child(1) { min-width: 120px; } /* 부트캠프 */
-        th:nth-child(2), td:nth-child(2) { min-width: 60px; }  /* 기수 */
-        th:nth-child(3), td:nth-child(3) { min-width: 80px; }  /* 이름 */
-        th:nth-child(4), td:nth-child(4) { min-width: 150px; } /* 이메일 */
-        th:nth-child(5), td:nth-child(5) { min-width: 60px; }  /* 성별 */
-        th:nth-child(6), td:nth-child(6) { min-width: 50px; }  /* 나이 */
-        th:nth-child(7), td:nth-child(7) { min-width: 120px; } /* 전화번호 */
-        th:nth-child(8), td:nth-child(8) { min-width: 80px; }  /* 상태 */
-        th:nth-child(9), td:nth-child(9) { min-width: 120px; } /* 메모 */
-        th:nth-child(10), td:nth-child(10) { min-width: 80px; } /* 내배카 보유 */
-        th:nth-child(11), td:nth-child(11) { min-width: 80px; } /* 고민이유 */
-        th:nth-child(12), td:nth-child(12) { min-width: 80px; } /* 저장 버튼 */
+
         th {
             background: var(--main-bg);
             color: var(--main-dark);
@@ -229,46 +149,25 @@
             padding: 12px 8px;
         }
         tr {
-            transition: all 0.2s ease;
+            transition: background 0.15s;
         }
         tr:hover {
             background: #FFF3E5;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(255, 119, 16, 0.1);
         }
         .status-select {
             border: 1.5px solid var(--main-orange);
-            border-radius: 6px;
-            padding: 8px 12px;
-            background: white;
+            border-radius: 8px;
+            padding: 6px 10px;
+            background: var(--main-bg);
             color: var(--main-dark);
-            font-size: 0.9rem;
-            transition: all 0.2s ease;
-            min-width: 100px;
         }
-        
-        .status-select:focus {
-            outline: none;
-            border-color: #e65c00;
-            box-shadow: 0 0 0 3px rgba(255, 119, 16, 0.1);
-        }
-        
         .memo-input {
-            width: 100%;
-            max-width: 180px;
+            width: 180px;
             border: 1.5px solid var(--main-orange);
-            border-radius: 6px;
-            padding: 8px 12px;
-            background: white;
+            border-radius: 8px;
+            padding: 6px 10px;
+            background: var(--main-bg);
             color: var(--main-dark);
-            font-size: 0.9rem;
-            transition: all 0.2s ease;
-        }
-        
-        .memo-input:focus {
-            outline: none;
-            border-color: #e65c00;
-            box-shadow: 0 0 0 3px rgba(255, 119, 16, 0.1);
         }
         #uploadMessage {
             margin-top: 10px;
@@ -303,20 +202,19 @@
         }
         @media (max-width: 1200px) {
             .section { padding: 24px 1vw; }
-            table { min-width: 1000px; }
+            table { min-width: 700px; }
         }
         @media (max-width: 900px) {
             .section { padding: 12px 0.5vw; }
-            table { min-width: 800px; }
+            table { min-width: 600px; }
             th, td { font-size: 0.95rem; padding: 8px 4px; }
         }
         @media (max-width: 700px) {
             .section { padding: 8px 0; }
             .header-title { font-size: 1.1rem; }
             th, td { font-size: 0.9rem; padding: 6px 2px; }
-            table { min-width: 600px; }
+            table { min-width: 400px; }
             .memo-input { width: 100px; }
-            /* 저장 버튼은 항상 보이도록 유지 */
             th:nth-child(4), td:nth-child(4), /* 이메일 */
             th:nth-child(9), td:nth-child(9), /* 메모 */
             th:nth-child(11), td:nth-child(11) /* 고민이유 */ {
@@ -644,7 +542,7 @@
                         <th>내배카 보유</th>
                         <th>고민이유</th>
                         <th>
-                          <button id="saveAllBtn" class="save-btn" style="margin-left:8px; padding: 10px 20px; font-size: 1rem;">💾 전체 저장</button>
+                          <button id="saveAllBtn" class="save-btn" style="margin-left:8px;">전체 저장</button>
                         </th>
                     </tr>
                 </thead>
