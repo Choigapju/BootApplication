@@ -45,6 +45,19 @@ class Student(db.Model):
     card_owned = db.Column(db.String(20))  # 내배카 보유 여부 (길이를 20으로 늘림)
     created_at_csv = db.Column(db.String(30))  # 또는 db.DateTime
     signup_email = db.Column(db.String(100))  # 가입 이메일 추가
+    
+    # 새로운 필드들 추가
+    birth_date = db.Column(db.Date)  # 생년월일
+    source = db.Column(db.String(100))  # 유입 경로
+    pass_status = db.Column(db.String(10))  # 합격 여부 (●, X)
+    hrd_conversion = db.Column(db.String(10))  # HRD전환 (●, X)
+    call_required = db.Column(db.String(10))  # 콜 필요 (O, X)
+    last_call_date = db.Column(db.Date)  # 최종 콜 날짜
+    call_result = db.Column(db.String(10))  # 콜 결과 (●, X)
+    is_considering = db.Column(db.String(10))  # 고민 여부 (O, X)
+    final_call_date = db.Column(db.Date)  # 최종 콜 (이탈관리)
+    call_outcome = db.Column(db.String(100))  # 콜 성과 (설득 완료, 설득 중, 포기)
+    additional_call_needed = db.Column(db.Date)  # 추가 콜 필요 (날짜)
 
 class EventComment(db.Model):
     __tablename__ = 'event_comments'
@@ -163,7 +176,6 @@ def upload_csv():
                     existing_students[(e1, e2)] = s
 
         status_map = {
-            '대상아님': '대상아님',
             '검토전': '검토전',
             '합격': '합격',
             '고민중': '고민중',
@@ -178,6 +190,11 @@ def upload_csv():
             signup_email = normalize_email(row.get('가입 이메일', ''))
             phone_str = normalize_phone(row.get('가입 연락처', ''))
             name = row.get('가입 이름', '').strip()
+
+            # 상태 확인 - '대상아님'인 경우 건너뛰기
+            status_val = status_map.get(str(row.get('합불상태', '')).strip(), None)
+            if status_val is None:  # '대상아님' 또는 매핑되지 않은 상태는 건너뛰기
+                continue
 
             # 기존 지원자 찾기 (이름, 전화번호, 이메일(둘 다) 중 하나라도 일치하면)
             candidates = Student.query.filter_by(bootcamp_id=bootcamp.id).all()
@@ -198,7 +215,6 @@ def upload_csv():
                         email_changed = True
                     break
 
-            status_val = status_map.get(str(row.get('합불상태', '')).strip(), '대상아님')
             should_add = True
 
             # 1. HRD최종등록자가 이미 있으면, 업로드 데이터는 무시(추가하지 않음)
@@ -209,8 +225,7 @@ def upload_csv():
             elif found and email_changed:
                 print(f"이메일 변경 감지: {found.name} - 기존: {found.email}, 새: {email}")
                 db.session.delete(found)
-                # 이메일 변경 시 상태를 '대상아님'으로 초기화 (새로운 지원)
-                status_val = '대상아님'
+                # 이메일 변경 시에도 현재 상태 유지 (이미 '대상아님'은 필터링됨)
 
             # 3. 그 외에는 기존 지원자 삭제 후 새로 추가
             elif found:
@@ -307,7 +322,20 @@ def get_students():
             'memo': student.memo or '',
             'card_owned': student.card_owned or '',
             'considering_reason': student.considering_reason or '',
-            'signup_email': student.signup_email or ''
+            'signup_email': student.signup_email or '',
+            'created_at_csv': student.created_at_csv or '',
+            # 새로운 필드들 추가
+            'birth_date': student.birth_date.strftime('%Y-%m-%d') if student.birth_date else '',
+            'source': student.source or '',
+            'pass_status': student.pass_status or '',
+            'hrd_conversion': student.hrd_conversion or '',
+            'call_required': student.call_required or '',
+            'last_call_date': student.last_call_date.strftime('%Y-%m-%d') if student.last_call_date else '',
+            'call_result': student.call_result or '',
+            'is_considering': student.is_considering or '',
+            'final_call_date': student.final_call_date.strftime('%Y-%m-%d') if student.final_call_date else '',
+            'call_outcome': student.call_outcome or '',
+            'additional_call_needed': student.additional_call_needed.strftime('%Y-%m-%d') if student.additional_call_needed else ''
         })
     return jsonify(results)
 
@@ -366,30 +394,74 @@ def delete_bootcamp():
 # 지원자 상태 업데이트 API
 @app.route('/student/update', methods=['POST'])
 def update_student():
+    from datetime import datetime
     data = request.get_json()
     student_id = data.get('id')
-    status = data.get('status')
-    memo = data.get('memo')
-    card_owned = data.get('card_owned')
-    considering_reason = data.get('considering_reason')
 
     try:
         student = Student.query.get(student_id)
         if not student:
             return jsonify({'error': '지원자를 찾을 수 없습니다.'}), 404
 
-        if status:
-            student.status = status
-        if memo is not None:
-            student.memo = memo
-        if card_owned is not None:
-            student.card_owned = card_owned
-        if considering_reason is not None:
-            # 빈 문자열 또는 '선택'이면 NULL로 저장
-            if considering_reason.strip() == '' or considering_reason == '선택':
-                student.considering_reason = None
-            else:
+        # 기존 필드들
+        if 'status' in data and data.get('status'):
+            student.status = data.get('status')
+        if 'memo' in data:
+            student.memo = data.get('memo')
+        if 'card_owned' in data:
+            student.card_owned = data.get('card_owned')
+        if 'considering_reason' in data:
+            considering_reason = data.get('considering_reason')
+            if considering_reason and considering_reason.strip() != '' and considering_reason != '선택':
                 student.considering_reason = considering_reason
+            else:
+                student.considering_reason = None
+
+        # 새로운 필드들 업데이트
+        if 'birth_date' in data and data.get('birth_date'):
+            try:
+                student.birth_date = datetime.strptime(data.get('birth_date'), '%Y-%m-%d').date()
+            except:
+                pass
+        
+        if 'source' in data:
+            student.source = data.get('source') if data.get('source') else None
+            
+        if 'pass_status' in data:
+            student.pass_status = data.get('pass_status') if data.get('pass_status') else None
+            
+        if 'hrd_conversion' in data:
+            student.hrd_conversion = data.get('hrd_conversion') if data.get('hrd_conversion') else None
+            
+        if 'call_required' in data:
+            student.call_required = data.get('call_required') if data.get('call_required') else None
+            
+        if 'last_call_date' in data and data.get('last_call_date'):
+            try:
+                student.last_call_date = datetime.strptime(data.get('last_call_date'), '%Y-%m-%d').date()
+            except:
+                pass
+                
+        if 'call_result' in data:
+            student.call_result = data.get('call_result') if data.get('call_result') else None
+            
+        if 'is_considering' in data:
+            student.is_considering = data.get('is_considering') if data.get('is_considering') else None
+            
+        if 'final_call_date' in data and data.get('final_call_date'):
+            try:
+                student.final_call_date = datetime.strptime(data.get('final_call_date'), '%Y-%m-%d').date()
+            except:
+                pass
+                
+        if 'call_outcome' in data:
+            student.call_outcome = data.get('call_outcome') if data.get('call_outcome') else None
+            
+        if 'additional_call_needed' in data and data.get('additional_call_needed'):
+            try:
+                student.additional_call_needed = datetime.strptime(data.get('additional_call_needed'), '%Y-%m-%d').date()
+            except:
+                pass
 
         db.session.commit()
         return jsonify({'message': '성공적으로 업데이트되었습니다.'}), 200
@@ -486,22 +558,42 @@ def download_students():
     # CSV 생성
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['지원완료일', '부트캠프', '기수', '이름', '가입 이메일', '지원서 이메일', '성별', '나이', '전화번호', '상태', '메모', '내배카 보유', '고민이유'])
+    writer.writerow([
+        # 1. 기본 정보
+        '이름', '번호', '멋사 가입 이메일', '지원서 이메일', '성별', '생년월일', '나이', '유입 경로', '지원 완료일',
+        # 2. 현황
+        '합격', 'HRD전환', '내일배움카드',
+        # 3. 콜 현황
+        '콜 필요', '최종 콜', '콜 결과',
+        # 4. 이탈 관리
+        '고민 여부', '고민 이유', '최종 콜', '콜 성과', '추가 콜 필요'
+    ])
     for student, bootcamp in students:
         writer.writerow([
-            student.created_at_csv or '',  # 지원완료일(제일 앞)
-            bootcamp.name,
-            bootcamp.generation,
-            student.name,
-            student.signup_email or '',   # 가입 이메일
-            student.email or '',          # 지원서 이메일
-            student.gender,
-            student.age,
-            student.phone,
-            student.status,
-            student.memo,
-            student.card_owned,
-            student.considering_reason
+            # 1. 기본 정보
+            student.name or '',
+            student.phone or '',
+            student.signup_email or '',
+            student.email or '',
+            student.gender or '',
+            student.birth_date.strftime('%Y-%m-%d') if student.birth_date else '',
+            student.age or '',
+            student.source or '',
+            student.created_at_csv or '',
+            # 2. 현황
+            student.pass_status or '',
+            student.hrd_conversion or '',
+            student.card_owned or '',
+            # 3. 콜 현황
+            student.call_required or '',
+            student.last_call_date.strftime('%Y-%m-%d') if student.last_call_date else '',
+            student.call_result or '',
+            # 4. 이탈 관리
+            student.is_considering or '',
+            student.considering_reason or '',
+            student.final_call_date.strftime('%Y-%m-%d') if student.final_call_date else '',
+            student.call_outcome or '',
+            student.additional_call_needed.strftime('%Y-%m-%d') if student.additional_call_needed else ''
         ])
     response = make_response(output.getvalue().encode('utf-8-sig'))
     response.headers['Content-Disposition'] = 'attachment; filename=students.csv'
@@ -510,6 +602,7 @@ def download_students():
 
 @app.route('/students/bulk_update', methods=['POST'])
 def bulk_update_students():
+    from datetime import datetime
     data = request.get_json()
     updates = data.get('updates', [])
     try:
@@ -517,6 +610,8 @@ def bulk_update_students():
             student = Student.query.get(upd['id'])
             if not student:
                 continue
+                
+            # 기존 필드들
             if 'status' in upd:
                 student.status = upd['status']
             if 'memo' in upd:
@@ -526,6 +621,53 @@ def bulk_update_students():
             if 'considering_reason' in upd:
                 cr = upd['considering_reason']
                 student.considering_reason = None if cr.strip() == '' or cr == '선택' else cr
+                
+            # 새로운 필드들
+            if 'birth_date' in upd and upd.get('birth_date'):
+                try:
+                    student.birth_date = datetime.strptime(upd.get('birth_date'), '%Y-%m-%d').date()
+                except:
+                    pass
+            
+            if 'source' in upd:
+                student.source = upd.get('source') if upd.get('source') else None
+                
+            if 'pass_status' in upd:
+                student.pass_status = upd.get('pass_status') if upd.get('pass_status') else None
+                
+            if 'hrd_conversion' in upd:
+                student.hrd_conversion = upd.get('hrd_conversion') if upd.get('hrd_conversion') else None
+                
+            if 'call_required' in upd:
+                student.call_required = upd.get('call_required') if upd.get('call_required') else None
+                
+            if 'last_call_date' in upd and upd.get('last_call_date'):
+                try:
+                    student.last_call_date = datetime.strptime(upd.get('last_call_date'), '%Y-%m-%d').date()
+                except:
+                    pass
+                    
+            if 'call_result' in upd:
+                student.call_result = upd.get('call_result') if upd.get('call_result') else None
+                
+            if 'is_considering' in upd:
+                student.is_considering = upd.get('is_considering') if upd.get('is_considering') else None
+                
+            if 'final_call_date' in upd and upd.get('final_call_date'):
+                try:
+                    student.final_call_date = datetime.strptime(upd.get('final_call_date'), '%Y-%m-%d').date()
+                except:
+                    pass
+                    
+            if 'call_outcome' in upd:
+                student.call_outcome = upd.get('call_outcome') if upd.get('call_outcome') else None
+                
+            if 'additional_call_needed' in upd and upd.get('additional_call_needed'):
+                try:
+                    student.additional_call_needed = datetime.strptime(upd.get('additional_call_needed'), '%Y-%m-%d').date()
+                except:
+                    pass
+                    
         db.session.commit()
         return jsonify({'message': '전체 저장 완료'}), 200
     except Exception as e:

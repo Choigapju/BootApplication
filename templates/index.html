@@ -129,7 +129,7 @@
 
         table {
             width: 100%;
-            min-width: 900px;
+            min-width: 1800px;
             background: var(--main-white);
             margin-bottom: 16px;
             table-layout: auto;
@@ -498,7 +498,6 @@
                         </div>
                     </div>
                     <div class="stat-cards">
-                        <div class="stat-card"><div>지원중</div><div class="stat-num" id="stat-apply">0명</div></div>
                         <div class="stat-card"><div>검토전</div><div class="stat-num" id="stat-review">0명</div></div>
                         <div class="stat-card"><div>합격 처리</div><div class="stat-num" id="stat-pass">0명</div></div>
                         <div class="stat-card"><div>고민중</div><div class="stat-num" id="stat-pending">0명</div></div>
@@ -532,7 +531,6 @@
             <div style="display:flex; align-items:center; gap:10px; flex:1;">
                 <select id="statusFilter" style="margin-right:12px;">
                     <option value="">전체 상태</option>
-                    <option value="대상아님">대상아님</option>
                     <option value="검토전">검토전</option>
                     <option value="합격">합격</option>
                     <option value="예비합격">예비합격</option>
@@ -559,25 +557,43 @@
             <table id="studentsTable">
                 <thead>
                     <tr>
-                        <th>부트캠프</th>
-                        <th>기수</th>
-                        <th>이름</th>
-                        <th>이메일</th>
-                        <th>성별</th>
-                        <th>나이</th>
-                        <th>전화번호</th>
-                        <th>상태</th>
-                        <th>
-                            메모
-                            <button id="memoSortBtn" style="font-size:0.9em; margin-left:4px; padding:2px 6px; border-radius:6px; border:1px solid #FF7710; background:#FFF3E5; color:#FF7710; cursor:pointer;">
-                                메모 우선
-                            </button>
-                        </th>
-                        <th>내배카 보유</th>
-                        <th>고민이유</th>
-                        <th>
+                        <!-- 1. 기본 정보 -->
+                        <th colspan="7" style="background:#FFE066; color:#333; text-align:center; font-weight:800;">1. 기본 정보</th>
+                        <!-- 2. 현황 -->
+                        <th colspan="3" style="background:#A8FFB6; color:#333; text-align:center; font-weight:800;">2. 현황</th>
+                        <!-- 3. 콜 현황 -->
+                        <th colspan="3" style="background:#6EC6FF; color:#333; text-align:center; font-weight:800;">3. 콜 현황</th>
+                        <!-- 4. 이탈 관리 -->
+                        <th colspan="5" style="background:#FFB6C1; color:#333; text-align:center; font-weight:800;">4. 이탈 관리 (고민 중)</th>
+                        <th rowspan="2">
                           <button id="saveAllBtn" class="save-btn" style="margin-left:8px;">전체 저장</button>
                         </th>
+                    </tr>
+                    <tr>
+                        <!-- 1. 기본 정보 -->
+                        <th>이름</th>
+                        <th>번호</th>
+                        <th>멋사 가입 이메일</th>
+                        <th>지원서 이메일</th>
+                        <th>성별</th>
+                        <th>생년월일</th>
+                        <th>나이</th>
+                        <th>유입 경로</th>
+                        <th>지원 완료일</th>
+                        <!-- 2. 현황 -->
+                        <th>합격</th>
+                        <th>HRD전환</th>
+                        <th>내일배움카드</th>
+                        <!-- 3. 콜 현황 -->
+                        <th>콜 필요</th>
+                        <th>최종 콜</th>
+                        <th>콜 결과</th>
+                        <!-- 4. 이탈 관리 -->
+                        <th>고민 여부</th>
+                        <th>고민 이유</th>
+                        <th>최종 콜</th>
+                        <th>콜 성과</th>
+                        <th>추가 콜 필요</th>
                     </tr>
                 </thead>
                 <tbody></tbody>
@@ -600,7 +616,6 @@
         if(window.statusDonutChart) window.statusDonutChart.destroy();
         // 상태별 색상 매핑
         const statusColorMap = {
-            '대상아님': '#B6AFFF',
             '검토전': '#666A73',
             '합격': '#6EC6FF',
             '예비합격': '#FFD700',
@@ -629,7 +644,6 @@
 
         // 현황 카드 숫자 자동 반영
         const statusMap = {
-            '대상아님': 'stat-apply',
             '검토전': 'stat-review',
             '합격': 'stat-pass',
             '고민중': 'stat-pending',
@@ -674,10 +688,9 @@
         const tbody = document.querySelector('#studentsTable tbody');
         tbody.innerHTML = '';
         if (data.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="10" class="no-data">지원자 데이터가 없습니다</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="19" class="no-data">지원자 데이터가 없습니다</td></tr>`;
         } else {
             const STATUS_OPTIONS = [
-                '대상아님',
                 '검토전',
                 '합격',
                 '예비합격',
@@ -705,44 +718,104 @@
             data.forEach(s => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td>${s.bootcamp || ''}</td>
-                    <td>${s.generation || ''}</td>
+                    <!-- 1. 기본 정보 -->
                     <td>${s.name || ''}</td>
-                    <td title="가입: ${s.signup_email || '-'}\n지원서: ${s.email || '-'}">
-                        가입: ${s.signup_email || '-'}<br>
-                        지원서: ${s.email || '-'}
-                    </td>
-                    <td>${s.gender || ''}</td>
-                    <td>${s.age || ''}</td>
                     <td>${s.phone || ''}</td>
+                    <td>${s.signup_email || ''}</td>
+                    <td>${s.email || ''}</td>
+                    <td>${s.gender || ''}</td>
                     <td>
-                        <select class="status-select" data-id="${s.id}">
-                            ${STATUS_OPTIONS.map(option =>
-                                `<option value="${option}" ${s.status === option ? 'selected' : ''}>${option}</option>`
-                            ).join('')}
+                        <input type="date" class="birth-date-input" data-id="${s.id}" value="${s.birth_date || ''}" style="width:120px; border:1px solid #FF7710; border-radius:4px; padding:4px;">
+                    </td>
+                    <td>${s.age || ''}</td>
+                    <td>
+                        <select class="source-select" data-id="${s.id}" style="width:100px; border:1px solid #FF7710; border-radius:4px; padding:4px;">
+                            <option value="">선택</option>
+                            <option value="광고" ${(s.source || '').trim() === '광고' ? 'selected' : ''}>광고</option>
+                            <option value="지인 추천" ${(s.source || '').trim() === '지인 추천' ? 'selected' : ''}>지인 추천</option>
+                            <option value="검색" ${(s.source || '').trim() === '검색' ? 'selected' : ''}>검색</option>
+                            <option value="SNS" ${(s.source || '').trim() === 'SNS' ? 'selected' : ''}>SNS</option>
+                            <option value="기타" ${(s.source || '').trim() === '기타' ? 'selected' : ''}>기타</option>
+                        </select>
+                    </td>
+                    <td>${s.created_at_csv || ''}</td>
+                    
+                    <!-- 2. 현황 -->
+                    <td>
+                        <select class="pass-status-select" data-id="${s.id}" style="width:80px; border:1px solid #FF7710; border-radius:4px; padding:4px;">
+                            <option value="">-</option>
+                            <option value="●" ${(s.pass_status || '').trim() === '●' ? 'selected' : ''}>●</option>
+                            <option value="X" ${(s.pass_status || '').trim() === 'X' ? 'selected' : ''}>X</option>
                         </select>
                     </td>
                     <td>
-                        <input type="text" class="memo-input" data-id="${s.id}" value="${s.memo || ''}" placeholder="메모 입력...">
-                    </td>
-                    <td>
-                        <select class="car-select" data-id="${s.id}">
-                            <option value="yes" ${s.card_owned === 'yes' ? 'selected' : ''}>보유중</option>
-                            <option value="no" ${s.card_owned === 'no' ? 'selected' : ''}>미보유</option>
-                            <option value="unknown" ${!s.card_owned || s.card_owned === 'unknown' ? 'selected' : ''}>모름</option>
-                            <option value="발급중" ${s.card_owned === '발급중' ? 'selected' : ''}>발급중</option>
+                        <select class="hrd-conversion-select" data-id="${s.id}" style="width:80px; border:1px solid #FF7710; border-radius:4px; padding:4px;">
+                            <option value="">-</option>
+                            <option value="●" ${(s.hrd_conversion || '').trim() === '●' ? 'selected' : ''}>●</option>
+                            <option value="X" ${(s.hrd_conversion || '').trim() === 'X' ? 'selected' : ''}>X</option>
                         </select>
                     </td>
                     <td>
-                        <select class="reason-select" data-id="${s.id}">
+                        <select class="card-select" data-id="${s.id}" style="width:80px; border:1px solid #FF7710; border-radius:4px; padding:4px;">
+                            <option value="">-</option>
+                            <option value="●" ${(s.card_owned || '').trim() === '●' ? 'selected' : ''}>●</option>
+                            <option value="X" ${(s.card_owned || '').trim() === 'X' ? 'selected' : ''}>X</option>
+                        </select>
+                    </td>
+                    
+                    <!-- 3. 콜 현황 -->
+                    <td>
+                        <select class="call-required-select" data-id="${s.id}" style="width:60px; border:1px solid #FF7710; border-radius:4px; padding:4px;">
+                            <option value="">-</option>
+                            <option value="O" ${(s.call_required || '').trim() === 'O' ? 'selected' : ''}>O</option>
+                            <option value="X" ${(s.call_required || '').trim() === 'X' ? 'selected' : ''}>X</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input type="date" class="last-call-date-input" data-id="${s.id}" value="${s.last_call_date || ''}" style="width:110px; border:1px solid #FF7710; border-radius:4px; padding:4px;">
+                    </td>
+                    <td>
+                        <select class="call-result-select" data-id="${s.id}" style="width:80px; border:1px solid #FF7710; border-radius:4px; padding:4px;">
+                            <option value="">-</option>
+                            <option value="●" ${(s.call_result || '').trim() === '●' ? 'selected' : ''}>●</option>
+                            <option value="X" ${(s.call_result || '').trim() === 'X' ? 'selected' : ''}>X</option>
+                        </select>
+                    </td>
+                    
+                    <!-- 4. 이탈 관리 -->
+                    <td>
+                        <select class="considering-select" data-id="${s.id}" style="width:60px; border:1px solid #FF7710; border-radius:4px; padding:4px;">
+                            <option value="">-</option>
+                            <option value="O" ${(s.is_considering || '').trim() === 'O' ? 'selected' : ''}>O</option>
+                            <option value="X" ${(s.is_considering || '').trim() === 'X' ? 'selected' : ''}>X</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select class="reason-select" data-id="${s.id}" style="width:100px; border:1px solid #FF7710; border-radius:4px; padding:4px;">
                             <option value="">선택</option>
                             <option value="전화 안됨" ${(s.considering_reason || '').trim() === '전화 안됨' ? 'selected' : ''}>전화 안됨</option>
                             <option value="타 기관과 고민중" ${(s.considering_reason || '').trim() === '타 기관과 고민중' ? 'selected' : ''}>타 기관과 고민중</option>
                             <option value="일정 고민중" ${(s.considering_reason || '').trim() === '일정 고민중' ? 'selected' : ''}>일정 고민중</option>
                             <option value="비용 고민중" ${(s.considering_reason || '').trim() === '비용 고민중' ? 'selected' : ''}>비용 고민중</option>
+                            <option value="건강" ${(s.considering_reason || '').trim() === '건강' ? 'selected' : ''}>건강</option>
                             <option value="기타" ${(s.considering_reason || '').trim() === '기타' ? 'selected' : ''}>기타</option>
                         </select>
                     </td>
+                    <td>
+                        <input type="date" class="final-call-date-input" data-id="${s.id}" value="${s.final_call_date || ''}" style="width:110px; border:1px solid #FF7710; border-radius:4px; padding:4px;">
+                    </td>
+                    <td>
+                        <select class="call-outcome-select" data-id="${s.id}" style="width:100px; border:1px solid #FF7710; border-radius:4px; padding:4px;">
+                            <option value="">선택</option>
+                            <option value="설득 완료" ${(s.call_outcome || '').trim() === '설득 완료' ? 'selected' : ''}>설득 완료</option>
+                            <option value="설득 중" ${(s.call_outcome || '').trim() === '설득 중' ? 'selected' : ''}>설득 중</option>
+                            <option value="포기" ${(s.call_outcome || '').trim() === '포기' ? 'selected' : ''}>포기</option>
+                        </select>
+                    </td>
+                    <td>
+                        <input type="date" class="additional-call-input" data-id="${s.id}" value="${s.additional_call_needed || ''}" style="width:110px; border:1px solid #FF7710; border-radius:4px; padding:4px;">
+                    </td>
+                    
                     <td>
                         <button class="save-btn" data-id="${s.id}">저장</button>
                     </td>
@@ -755,15 +828,30 @@
                 btn.onclick = async function() {
                     const id = btn.getAttribute('data-id');
                     const row = btn.closest('tr');
-                    const status = row.querySelector('.status-select').value;
-                    const memo = row.querySelector('.memo-input').value;
-                    const card_owned = row.querySelector('.car-select').value;
-                    const considering_reason = row.querySelector('.reason-select').value;
+                    
+                    // 새로운 필드들 수집
+                    const updateData = {
+                        id: id,
+                        birth_date: row.querySelector('.birth-date-input')?.value || '',
+                        source: row.querySelector('.source-select')?.value || '',
+                        pass_status: row.querySelector('.pass-status-select')?.value || '',
+                        hrd_conversion: row.querySelector('.hrd-conversion-select')?.value || '',
+                        card_owned: row.querySelector('.card-select')?.value || '',
+                        call_required: row.querySelector('.call-required-select')?.value || '',
+                        last_call_date: row.querySelector('.last-call-date-input')?.value || '',
+                        call_result: row.querySelector('.call-result-select')?.value || '',
+                        is_considering: row.querySelector('.considering-select')?.value || '',
+                        considering_reason: row.querySelector('.reason-select')?.value || '',
+                        final_call_date: row.querySelector('.final-call-date-input')?.value || '',
+                        call_outcome: row.querySelector('.call-outcome-select')?.value || '',
+                        additional_call_needed: row.querySelector('.additional-call-input')?.value || ''
+                    };
+                    
                     try {
                         const res = await fetch('/student/update', {
                             method: 'POST',
                             headers: {'Content-Type': 'application/json'},
-                            body: JSON.stringify({id, status, memo, card_owned, considering_reason})
+                            body: JSON.stringify(updateData)
                         });
                         const data = await res.json();
                         if (res.ok) {
@@ -886,13 +974,26 @@
                     const rows = document.querySelectorAll('#studentsTable tbody tr');
                     const updates = [];
                     rows.forEach(row => {
-                        const id = row.querySelector('.status-select')?.getAttribute('data-id');
+                        const id = row.querySelector('.save-btn')?.getAttribute('data-id');
                         if (!id) return;
-                        const status = row.querySelector('.status-select').value;
-                        const memo = row.querySelector('.memo-input').value;
-                        const card_owned = row.querySelector('.car-select').value;
-                        const considering_reason = row.querySelector('.reason-select').value;
-                        updates.push({id, status, memo, card_owned, considering_reason});
+                        
+                        const updateData = {
+                            id: id,
+                            birth_date: row.querySelector('.birth-date-input')?.value || '',
+                            source: row.querySelector('.source-select')?.value || '',
+                            pass_status: row.querySelector('.pass-status-select')?.value || '',
+                            hrd_conversion: row.querySelector('.hrd-conversion-select')?.value || '',
+                            card_owned: row.querySelector('.card-select')?.value || '',
+                            call_required: row.querySelector('.call-required-select')?.value || '',
+                            last_call_date: row.querySelector('.last-call-date-input')?.value || '',
+                            call_result: row.querySelector('.call-result-select')?.value || '',
+                            is_considering: row.querySelector('.considering-select')?.value || '',
+                            considering_reason: row.querySelector('.reason-select')?.value || '',
+                            final_call_date: row.querySelector('.final-call-date-input')?.value || '',
+                            call_outcome: row.querySelector('.call-outcome-select')?.value || '',
+                            additional_call_needed: row.querySelector('.additional-call-input')?.value || ''
+                        };
+                        updates.push(updateData);
                     });
 
                     // 한번에 백엔드로 전송
@@ -1056,4 +1157,5 @@
     };
     </script>
 </body>
+</html>
 </html>
