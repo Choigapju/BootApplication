@@ -14,8 +14,8 @@ load_dotenv()  # .env 파일 로드
 app = Flask(__name__)
 CORS(app)
 
-# .env 파일의 DATABASE_URL 사용
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
+# .env 파일의 DATABASE_URL 사용하거나 기본값으로 SQLite 사용
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///instance/bootapplication.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -36,7 +36,7 @@ class Student(db.Model):
     gender = db.Column(db.String(10))
     age = db.Column(db.Integer)
     phone = db.Column(db.String(30))
-    status = db.Column(db.String(20), default='대상아님')
+    status = db.Column(db.String(20), default='검토전')  # 기본값을 '검토전'으로 변경
     memo = db.Column(db.Text)  # 메모 필드 추가
     bootcamp_id = db.Column(db.Integer, db.ForeignKey('bootcamps.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=db.func.now())  # 생성 시간
@@ -288,13 +288,16 @@ def upload_csv():
         print("전체 에러:", str(e))
         return jsonify({'error': f'처리 중 에러가 발생했습니다: {str(e)}'}), 500
 
-# 부트캠프/기수별 지원자 리스트
+# 부트캠프/기수별 지원자 리스트 (페이지네이션 포함)
 @app.route('/students', methods=['GET'])
 def get_students():
     bootcamp = request.args.get('bootcamp', '')
     generation = request.args.get('generation', '')
     status = request.args.get('status', '')
     search = request.args.get('search', '').strip()
+    page = int(request.args.get('page', 1))  # 페이지 번호 (기본값: 1)
+    per_page = int(request.args.get('per_page', 30))  # 페이지당 항목 수 (기본값: 30)
+    
     query = db.session.query(Student, Bootcamp).join(Bootcamp)
     if bootcamp:
         query = query.filter(Bootcamp.name == bootcamp)
@@ -307,8 +310,16 @@ def get_students():
         query = query.filter(
             db.or_(Student.name.ilike(like), Student.phone.ilike(like), Student.email.ilike(like))
         )
+    
+    # 전체 개수 계산
+    total_count = query.count()
+    
+    # 페이지네이션 적용
+    offset = (page - 1) * per_page
+    paginated_query = query.offset(offset).limit(per_page)
+    
     results = []
-    for student, bootcamp in query.all():
+    for student, bootcamp in paginated_query.all():
         results.append({
             'id': student.id,
             'bootcamp': bootcamp.name or '',
@@ -322,22 +333,21 @@ def get_students():
             'memo': student.memo or '',
             'card_owned': student.card_owned or '',
             'considering_reason': student.considering_reason or '',
-            'signup_email': student.signup_email or '',
-            'created_at_csv': student.created_at_csv or '',
-            # 새로운 필드들 추가
-            'birth_date': student.birth_date.strftime('%Y-%m-%d') if student.birth_date else '',
-            'source': student.source or '',
-            'pass_status': student.pass_status or '',
-            'hrd_conversion': student.hrd_conversion or '',
-            'call_required': student.call_required or '',
-            'last_call_date': student.last_call_date.strftime('%Y-%m-%d') if student.last_call_date else '',
-            'call_result': student.call_result or '',
-            'is_considering': student.is_considering or '',
-            'final_call_date': student.final_call_date.strftime('%Y-%m-%d') if student.final_call_date else '',
-            'call_outcome': student.call_outcome or '',
-            'additional_call_needed': student.additional_call_needed.strftime('%Y-%m-%d') if student.additional_call_needed else ''
+            'signup_email': student.signup_email or ''
         })
-    return jsonify(results)
+    
+    # 페이지네이션 정보 포함하여 반환
+    return jsonify({
+        'students': results,
+        'pagination': {
+            'current_page': page,
+            'per_page': per_page,
+            'total_count': total_count,
+            'total_pages': (total_count + per_page - 1) // per_page,
+            'has_prev': page > 1,
+            'has_next': page * per_page < total_count
+        }
+    })
 
 # 전체 지원자 통계
 @app.route('/stats', methods=['GET'])
@@ -473,6 +483,153 @@ def update_student():
 @app.route('/')
 def index():
     return render_template('index.html')
+
+# 아웃콜 관리 페이지
+@app.route('/outcall')
+def outcall():
+    return render_template('outcall.html')
+
+# 아웃콜 지원자 목록 조회 (기존 Student 데이터 사용, 페이지네이션 포함)
+@app.route('/outcall/students', methods=['GET'])
+def get_outcall_students():
+    bootcamp = request.args.get('bootcamp', '')
+    generation = request.args.get('generation', '')
+    search = request.args.get('search', '').strip()
+    page = int(request.args.get('page', 1))  # 페이지 번호 (기본값: 1)
+    per_page = int(request.args.get('per_page', 30))  # 페이지당 항목 수 (기본값: 30)
+    
+    query = db.session.query(Student, Bootcamp).join(Bootcamp)
+    if bootcamp:
+        query = query.filter(Bootcamp.name == bootcamp)
+    if generation:
+        query = query.filter(Bootcamp.generation == generation)
+    if search:
+        like = f"%{search}%"
+        query = query.filter(
+            db.or_(Student.name.ilike(like), Student.phone.ilike(like))
+        )
+    
+    # 전체 개수 계산
+    total_count = query.count()
+    
+    # 페이지네이션 적용
+    offset = (page - 1) * per_page
+    paginated_query = query.offset(offset).limit(per_page)
+    
+    results = []
+    for student, bootcamp in paginated_query.all():
+        # 메인 대시보드 데이터를 바탕으로 현황 자동 매핑
+        
+        # 1. 합격 상태 매핑 (메인의 '상태' 컬럼 기준)
+        pass_status = ''
+        if student.status in ['합격', 'HRD최종등록']:
+            pass_status = '●'
+        elif student.status in ['불합격', '지원취소']:
+            pass_status = 'X'
+        
+        # 2. HRD전환 상태 매핑 (HRD최종등록인 경우 ●)
+        hrd_conversion = ''
+        if student.status == 'HRD최종등록':
+            hrd_conversion = '●'
+        elif student.status in ['불합격', '지원취소']:
+            hrd_conversion = 'X'
+        
+        # 3. 내일배움카드 상태 매핑 (메인의 '내배카 보유' 컬럼 기준)
+        learning_card = ''
+        if student.card_owned == 'yes' or student.card_owned == '보유중':
+            learning_card = '●'
+        elif student.card_owned == 'no' or student.card_owned == '미보유':
+            learning_card = 'X'
+        elif student.card_owned == '발급중':
+            learning_card = '발급중'
+        
+        results.append({
+            'id': student.id,
+            'name': student.name or '',
+            'phone': student.phone or '',
+            'signup_email': student.signup_email or '',
+            'application_email': student.email or '',  # 지원서 이메일은 email 필드 사용
+            'gender': student.gender or '',
+            'birth_date': student.birth_date.strftime('%Y-%m-%d') if getattr(student, 'birth_date', None) else '',
+            'age': student.age if student.age is not None else '',
+            'source': getattr(student, 'source', '') or '',
+            'application_completion_date': student.created_at_csv or '',  # 지원 완료일
+            
+            # 자동 매핑된 현황 데이터
+            'pass_status': pass_status,
+            'hrd_conversion': hrd_conversion,
+            'learning_card': learning_card,
+            
+            'call_required': getattr(student, 'call_required', '') or '',
+            'last_call_date': getattr(student, 'last_call_date', None),
+            'call_result': getattr(student, 'call_result', '') or '',
+            'is_considering': getattr(student, 'is_considering', '') or '',
+            'considering_reason': student.considering_reason or '',
+            'final_call_date': getattr(student, 'final_call_date', None),
+            'call_outcome': getattr(student, 'call_outcome', '') or '',
+            'additional_call_needed': getattr(student, 'additional_call_needed', None)
+        })
+    
+    # 페이지네이션 정보 포함하여 반환
+    return jsonify({
+        'students': results,
+        'pagination': {
+            'current_page': page,
+            'per_page': per_page,
+            'total_count': total_count,
+            'total_pages': (total_count + per_page - 1) // per_page,
+            'has_prev': page > 1,
+            'has_next': page * per_page < total_count
+        }
+    })
+
+# 아웃콜 지원자 업데이트 (기존 Student 모델 사용)
+@app.route('/outcall/update', methods=['POST'])
+def update_outcall_student():
+    from datetime import datetime
+    data = request.get_json()
+    student_id = data.get('id')
+
+    try:
+        student = Student.query.get(student_id)
+        if not student:
+            return jsonify({'error': '지원자를 찾을 수 없습니다.'}), 404
+
+        # 날짜 필드들 업데이트 (새로 추가된 필드들)
+        date_fields = ['birth_date', 'last_call_date', 'final_call_date', 'additional_call_needed']
+        for field in date_fields:
+            if field in data and data.get(field):
+                try:
+                    if hasattr(student, field):
+                        setattr(student, field, datetime.strptime(data.get(field), '%Y-%m-%d').date())
+                except:
+                    pass
+
+        # 문자열 필드들 업데이트
+        if 'source' in data and hasattr(student, 'source'):
+            student.source = data.get('source') if data.get('source') else None
+        if 'pass_status' in data and hasattr(student, 'pass_status'):
+            student.pass_status = data.get('pass_status') if data.get('pass_status') else None
+        if 'hrd_conversion' in data and hasattr(student, 'hrd_conversion'):
+            student.hrd_conversion = data.get('hrd_conversion') if data.get('hrd_conversion') else None
+        if 'learning_card' in data:
+            student.card_owned = data.get('learning_card') if data.get('learning_card') else None
+        if 'call_required' in data and hasattr(student, 'call_required'):
+            student.call_required = data.get('call_required') if data.get('call_required') else None
+        if 'call_result' in data and hasattr(student, 'call_result'):
+            student.call_result = data.get('call_result') if data.get('call_result') else None
+        if 'is_considering' in data and hasattr(student, 'is_considering'):
+            student.is_considering = data.get('is_considering') if data.get('is_considering') else None
+        if 'considering_reason' in data:
+            student.considering_reason = data.get('considering_reason') if data.get('considering_reason') else None
+        if 'call_outcome' in data and hasattr(student, 'call_outcome'):
+            student.call_outcome = data.get('call_outcome') if data.get('call_outcome') else None
+
+        db.session.commit()
+        return jsonify({'message': '성공적으로 업데이트되었습니다.'}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/stats_by_status', methods=['GET'])
 def stats_by_status():
