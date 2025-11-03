@@ -1,0 +1,1525 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>KDT 교육 지원자 관리 시스템</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css?v=1">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js?v=1"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js?v=1"></script>
+    <style>
+        /* 기본 스타일 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Pretendard Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', sans-serif;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background-color: #f8f9fa;
+            color: #333;
+            line-height: 1.5;
+        }
+
+        /* 헤더 스타일 */
+        header {
+            background-color: #ff6b00;
+            padding: 1.25rem 2rem;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 1.35rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+        }
+
+        /* 대시보드 영역 */
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            padding: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .dashboard-card {
+            background-color: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .dashboard-card h2 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 1.25rem;
+            letter-spacing: -0.02em;
+        }
+
+        /* 통계 카드 스타일 */
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+
+        .stat-item {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .stat-item span:first-child {
+            font-size: 0.875rem;
+            color: #666;
+        }
+
+        .stat-item span:last-child {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #ff6b00;
+        }
+
+        /* 차트 컨테이너 */
+        .chart-container {
+            height: 240px;
+        }
+
+        /* 메인 컨텐츠 영역 */
+        .main-container {
+            padding: 0 2rem 2rem;
+        }
+
+        .content {
+            background-color: white;
+            border-radius: 16px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+        }
+
+        /* 툴바 스타일 */
+        .toolbar {
+            background-color: white;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+        }
+
+        /* 부트캠프 선택기 스타일 */
+        .bootcamp-selector {
+            position: relative;
+            min-width: 220px;
+        }
+        
+        .bootcamp-dropdown {
+            padding: 0.75rem 1.25rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            font-size: 0.925rem;
+            background-color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.2s;
+        }
+        
+        .bootcamp-dropdown:hover {
+            border-color: #ff6b00;
+        }
+        
+        .bootcamp-menu {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            width: 100%;
+            background-color: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+        
+        .bootcamp-menu.show {
+            display: block;
+        }
+        
+        .bootcamp-item {
+            padding: 0.625rem 1rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: background-color 0.2s;
+        }
+        
+        .bootcamp-item:hover {
+            background-color: #fff8f3;
+        }
+
+        /* 상태 태그 스타일 */
+        .status-tag {
+            padding: 0.375rem 1rem;
+            border-radius: 999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        .status-tag.합격-처리 {
+            background-color: #ebf5ff;
+            color: #0066cc;
+        }
+
+        .status-tag.지원중 {
+            background-color: #eeeeff;
+            color: #3333cc;
+        }
+
+        .status-tag.고민중 {
+            background-color: #fff5eb;
+            color: #cc6600;
+        }
+
+        .status-tag.수강-취소 {
+            background-color: #ffebeb;
+            color: #cc0000;
+        }
+
+        /* 테이블 스타일 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            padding: 1rem 1.25rem;
+            text-align: left;
+            font-weight: 600;
+            color: #4a4a4a;
+            font-size: 0.925rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        td {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid #eee;
+            color: #4a4a4a;
+            font-size: 0.925rem;
+        }
+
+        tr:hover {
+            background-color: #fff8f3;
+        }
+
+        /* 입력 필드 스타일 */
+        .memo-input, .status-select {
+            width: 100%;
+            padding: 0.625rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+
+        .memo-input:focus, .status-select:focus {
+            outline: none;
+            border-color: #ff6b00;
+            box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.1);
+        }
+
+        /* 모달 스타일 */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            display: none;
+        }
+
+        .modal {
+            background-color: white;
+            border-radius: 16px;
+            padding: 2rem;
+            width: 32rem;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .modal-body {
+            margin-bottom: 2rem;
+        }
+
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .radio-label {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .radio-label:hover {
+            background-color: #fff8f3;
+        }
+
+        .radio-label input[type="radio"] {
+            width: 1.25rem;
+            height: 1.25rem;
+            accent-color: #ff6b00;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 0.925rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-cancel {
+            background-color: #f3f4f6;
+            color: #4b5563;
+        }
+
+        .btn-cancel:hover {
+            background-color: #e5e7eb;
+        }
+
+        .btn-confirm {
+            background-color: #ff6b00;
+            color: white;
+        }
+
+        .btn-confirm:hover {
+            background-color: #e65c00;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* 로딩 인디케이터 */
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #ff6b00;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        /* 전화번호 스타일 */
+        .phone-container {
+            display: flex;
+            align-items: center;
+        }
+
+        .phone-icon {
+            margin-left: 0.5rem;
+            color: #3b82f6;
+            cursor: pointer;
+        }
+
+        .phone-icon:hover {
+            color: #2563eb;
+        }
+
+        .upload-btn {
+            background-color: #ff6b00;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 12px;
+            font-weight: 500;
+            font-size: 0.925rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(255, 107, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-btn:hover {
+            background-color: #ff7b1a;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(255, 107, 0, 0.3);
+        }
+
+        .upload-btn:active {
+            transform: translateY(1px);
+            box-shadow: 0 1px 2px rgba(255, 107, 0, 0.2);
+        }
+
+        .upload-btn i {
+            font-size: 1.1rem;
+        }
+
+        .upload-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                120deg,
+                transparent,
+                rgba(255, 255, 255, 0.2),
+                transparent
+            );
+            transition: 0.5s;
+        }
+
+        .upload-btn:hover::before {
+            left: 100%;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid #eee;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            background: white;
+        }
+
+        .tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: none;
+            padding: 0.625rem 1.25rem;
+            border-radius: 999px;
+            color: #666;
+            font-size: 0.925rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tab-btn span {
+            color: #ff6b00;
+            font-weight: 600;
+        }
+
+        .tab-btn:hover {
+            background-color: #fff8f3;
+            color: #ff6b00;
+        }
+
+        .tab-btn.active {
+            background-color: #fff0e6;
+            color: #ff6b00;
+        }
+
+        .tab-btn.active span {
+            color: #ff6b00;
+        }
+
+        .loading-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            display: none;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #FF5722;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 300px;
+            text-align: center;
+        }
+
+        .modal-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #FF5722;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        button {
+            padding: 8px 16px;
+            background-color: #FF5722;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #F4511E;
+        }
+
+        .alert-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            display: none;
+        }
+
+        .alert-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 300px;
+            text-align: center;
+        }
+
+        .alert-message {
+            margin-bottom: 15px;
+        }
+
+        .alert-button {
+            padding: 8px 16px;
+            background-color: #FF5722;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .alert-button:hover {
+            background-color: #F4511E;
+        }
+    </style>
+</head>
+<body>
+    <!-- 로딩 인디케이터 -->
+    <div class="loading-container" style="display: none;">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- 모달 -->
+    <div class="modal-backdrop" id="reasonModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title">고민 이유 선택</h3>
+            </div>
+            <div class="modal-body">
+                <div class="radio-group" id="reasonOptions">
+                    <label class="radio-label">
+                        <input type="radio" name="consideringReason" value="notReachable">
+                        전화 안됨
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="consideringReason" value="comparing">
+                        타 기관과 고민중
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="consideringReason" value="schedule">
+                        일정 고민중
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="consideringReason" value="financial">
+                        비용 고민중
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="consideringReason" value="other">
+                        기타
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-cancel" id="cancelReasonBtn">취소</button>
+                <button class="btn btn-confirm" id="confirmReasonBtn">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 모달 추가 -->
+    <div id="loadingModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-spinner"></div>
+            <p>데이터를 불러오는 중입니다...</p>
+        </div>
+    </div>
+
+    <!-- 알림 모달 추가 -->
+    <div id="alertModal" class="modal">
+        <div class="modal-content">
+            <p id="alertMessage"></p>
+            <button onclick="closeAlertModal()">확인</button>
+        </div>
+    </div>
+
+    <!-- 헤더 -->
+    <header>
+        <h1>KDT 교육 지원자 관리 시스템</h1>
+    </header>
+
+    <!-- 대시보드 -->
+    <div class="dashboard">
+        <!-- 현황 카드 -->
+        <div class="dashboard-card">
+            <h2>현황</h2>
+            <div class="stats-container">
+                <div class="stat-item">
+                    <span>전체</span>
+                    <span id="totalCount">0명</span>
+                </div>
+                <div class="stat-item">
+                    <span>지원중</span>
+                    <span id="applyingCount">0명</span>
+                </div>
+                <div class="stat-item">
+                    <span>합격 처리</span>
+                    <span id="acceptedCount">0명</span>
+                </div>
+                <div class="stat-item">
+                    <span>고민중</span>
+                    <span id="consideringCount">0명</span>
+                </div>
+                <div class="stat-item">
+                    <span>HRD 최종 등록</span>
+                    <span id="registeredCount">0명</span>
+                </div>
+                <div class="stat-item">
+                    <span>수강 취소</span>
+                    <span id="canceledCount">0명</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 진행 상태 차트 -->
+        <div class="dashboard-card">
+            <h2>진행 상태</h2>
+            <div class="chart-container">
+                <canvas id="statusPieChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 고민중 이유 차트 -->
+        <div class="dashboard-card" id="reasonChartContainer">
+            <h2>고민중 이유</h2>
+            <div class="chart-container">
+                <canvas id="reasonBarChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- 메인 컨테이너 -->
+    <div class="main-container">
+        <!-- 메인 콘텐츠 -->
+        <div class="content">
+            <!-- 툴바 -->
+            <div class="toolbar">
+                <!-- 부트캠프 선택 드롭다운 -->
+                <div class="bootcamp-selector">
+                    <div class="bootcamp-dropdown" id="bootcampDropdown">
+                        <span id="currentBootcamp">전체 부트캠프</span>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div class="bootcamp-menu" id="bootcampMenu">
+                        <div class="bootcamp-item" data-value="all">전체 부트캠프</div>
+                        <div class="bootcamp-item" data-value="frontend">프론트엔드</div>
+                        <div class="bootcamp-item" data-value="backend">백엔드</div>
+                        <div class="bootcamp-item" data-value="ios">iOS 개발</div>
+                        <div class="bootcamp-item" data-value="android">Android 개발</div>
+                        <div class="bootcamp-item" data-value="data">데이터 분석</div>
+                        <div class="bootcamp-item" data-value="uxui">UX/UI 디자인</div>
+                        <div class="bootcamp-item" data-value="startup">스타트업 스테이션</div>
+                        <div class="bootcamp-item" data-value="shortterm">단기 심화</div>
+                        <div class="bootcamp-item" data-value="ai-service">AI 웹 서비스 개발</div>
+                        <div class="bootcamp-item" data-value="game">유니티 게임 개발</div>
+                        <div class="bootcamp-item" data-value="cloud">클라우드 엔지니어링</div>
+                        <div class="bootcamp-item" data-value="ai">AI</div>
+                        <div class="bootcamp-item" data-value="blockchain">블록체인</div>
+                        <div class="bootcamp-item" data-value="growth">그로스 마케팅</div>
+                    </div>
+                </div>
+                
+                <!-- 오른쪽 요소들 그룹 -->
+                <div class="toolbar-right">
+                    <!-- 검색 상자 -->
+                    <div class="search-container">
+                        <i class="fas fa-search"></i>
+                        <input type="text" class="search-input" id="searchInput" placeholder="이름 또는 전화번호 검색...">
+                    </div>
+
+                    <!-- 파일 업로드 버튼 -->
+                    <label class="upload-btn">
+                        <i class="fas fa-upload"></i>
+                        <span>지원 데이터 업로드</span>
+                        <input type="file" id="fileUpload" style="display: none;" accept=".csv,.xlsx,.xls">
+                    </label>
+                </div>
+            </div>
+
+            <!-- 탭 메뉴 -->
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="all">전체 <span id="tabTotalCount">0</span></button>
+                <button class="tab-btn" data-tab="applying">지원중 <span id="tabApplyingCount">0</span></button>
+                <button class="tab-btn" data-tab="accepted">합격 처리 <span id="tabAcceptedCount">0</span></button>
+                <button class="tab-btn" data-tab="considering">고민중 <span id="tabConsideringCount">0</span></button>
+                <button class="tab-btn" data-tab="registered">HRD 최종 등록 <span id="tabRegisteredCount">0</span></button>
+                <button class="tab-btn" data-tab="canceled">수강 취소 <span id="tabCanceledCount">0</span></button>
+            </div>
+
+            <!-- 테이블 영역 -->
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>이름</th>
+                            <th>성별</th>
+                            <th>나이</th>
+                            <th>연락처</th>
+                            <th>이메일</th>
+                            <th>상태</th>
+                            <th>마지막 연락일</th>
+                            <th>메모</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="studentTableBody">
+                        <!-- 학생 데이터가 여기에 동적으로 추가됩니다 -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript 코드 -->
+    <script>
+        // 전역 변수
+        let students = []; // 모든 학생 데이터
+        let filteredStudents = []; // 필터링된 학생 데이터
+        let currentTab = 'all'; // 현재 선택된 탭
+        let currentBootcamp = 'all'; // 현재 선택된 부트캠프
+        let statusPieChart = null; // 상태 파이 차트 객체
+        let reasonBarChart = null; // 이유 막대 차트 객체
+        let activeStudentId = null; // 상태 변경 중인 학생 ID
+
+        // API URL 설정
+        const API_URL = window.location.hostname === 'localhost' 
+            ? 'http://localhost:10000/api'
+            : 'https://bootapplication-test.onrender.com/api';  // 실제 배포된 백엔드 URL로 변경해주세요
+
+        // 상태 옵션과 설명
+        const statusOptions = {
+            applying: '지원중',
+            accepted: '합격 처리',
+            considering: '고민중',
+            registered: 'HRD 최종 등록',
+            canceled: '수강 취소'
+        };
+
+        // 고민중 이유 옵션과 설명
+        const consideringReasons = [
+            { value: 'notReachable', label: '전화 안됨' },
+            { value: 'comparing', label: '타 기관과 고민중' },
+            { value: 'schedule', label: '일정 고민중' },
+            { value: 'financial', label: '비용 고민중' },
+            { value: 'other', label: '기타' }
+        ];
+
+        // DOM 요소 선택
+        const fileUploadInput = document.getElementById('fileUpload');
+        const searchInput = document.getElementById('searchInput');
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const studentTableBody = document.getElementById('studentTableBody');
+        const reasonModal = document.getElementById('reasonModal');
+        const cancelReasonBtn = document.getElementById('cancelReasonBtn');
+        const confirmReasonBtn = document.getElementById('confirmReasonBtn');
+        const loaderContainer = document.getElementById('loaderContainer');
+        const bootcampDropdown = document.getElementById('bootcampDropdown');
+        const bootcampMenu = document.getElementById('bootcampMenu');
+        const currentBootcampSpan = document.getElementById('currentBootcamp');
+        const bootcampItems = document.querySelectorAll('.bootcamp-item');
+
+        // 초기화 함수
+        function init() {
+            // 이벤트 리스너 설정
+            fileUploadInput.addEventListener('change', handleFileUpload);
+            searchInput.addEventListener('input', handleSearch);
+            tabButtons.forEach(btn => {
+                btn.addEventListener('click', () => handleTabChange(btn.dataset.tab));
+            });
+            cancelReasonBtn.addEventListener('click', closeReasonModal);
+            confirmReasonBtn.addEventListener('click', confirmReasonChange);
+            
+            // 부트캠프 선택 드롭다운 이벤트
+            bootcampDropdown.addEventListener('click', function() {
+                bootcampMenu.classList.toggle('show');
+            });
+            
+            // 부트캠프 항목 선택
+            bootcampItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    const value = this.dataset.value;
+                    const text = this.textContent;
+                    
+                    currentBootcampSpan.textContent = text;
+                    bootcampMenu.classList.remove('show');
+                    
+                    // 부트캠프 변경 시 데이터 필터링 또는 페이지 이동
+                    changeBootcamp(value);
+                });
+            });
+            
+            // 다른 곳을 클릭하면 메뉴 닫기
+            document.addEventListener('click', function(event) {
+                if (!bootcampDropdown.contains(event.target)) {
+                    bootcampMenu.classList.remove('show');
+                }
+            });
+
+            // 서버에서 학생 데이터 가져오기
+            fetchStudents();
+            
+            // 차트 초기화
+            initCharts();
+        }
+
+        // 현재 선택된 부트캠프 값 가져오기
+        function getCurrentBootcampValue() {
+            return currentBootcamp;
+        }
+
+        // 부트캠프 변경 시 호출되는 함수
+        function changeBootcamp(bootcampValue) {
+            currentBootcamp = bootcampValue;
+            console.log('선택된 부트캠프:', bootcampValue);
+            
+            // 부트캠프별 데이터 로드 또는 필터링 로직
+            if (bootcampValue === 'all') {
+                // 전체 부트캠프 데이터 로드
+                fetchAllBootcampData();
+            } else {
+                // 특정 부트캠프 데이터 로드
+                fetchBootcampData(bootcampValue);
+            }
+        }
+
+        // 전체 부트캠프 데이터 로드 함수
+        function fetchAllBootcampData() {
+            // 기존 fetchStudents 함수 호출 또는 유사한 로직
+            fetchStudents();
+        }
+
+        // 특정 부트캠프 데이터 로드 함수
+        async function fetchBootcampData(bootcampId) {
+            try {
+                showLoading();
+                const response = await fetch(`${API_URL}/bootcamps/${bootcampId}/students`);
+                if (!response.ok) {
+                    throw new Error('서버 응답 오류');
+                }
+                const data = await response.json();
+                hideLoading();
+                return data;
+            } catch (error) {
+                hideLoading();
+                showAlert('데이터를 불러오는 중 오류가 발생했습니다. 다시 시도해주세요.');
+                console.error('Error:', error);
+                throw error;
+            }
+        }
+
+        // 서버에서 학생 데이터 가져오기
+        async function fetchStudents() {
+            try {
+                showLoading();
+                
+                const response = await fetch(`${API_URL}/students`);
+                
+                if (!response.ok) {
+                    throw new Error('서버에서 데이터를 가져오는 데 실패했습니다.');
+                }
+                
+                students = await response.json();
+                filteredStudents = [...students];
+                
+                renderStudentTable();
+                updateStats();
+                updateCharts();
+                
+                hideLoading();
+            } catch (error) {
+                hideLoading();
+                showAlert('데이터를 불러오는 중 오류가 발생했습니다. 페이지를 새로고침해주세요.');
+                console.error('Error:', error);
+            }
+        }
+
+        // 파일 업로드 처리 함수
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            showLoading();
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                // 현재 선택된 부트캠프에 데이터 업로드
+                const uploadUrl = currentBootcamp === 'all' 
+                    ? `${API_URL}/upload`
+                    : `${API_URL}/bootcamps/${currentBootcamp}/upload`;
+                
+                const response = await fetch(uploadUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || '파일 업로드 중 오류가 발생했습니다.');
+                }
+                
+                const result = await response.json();
+                
+                // 업로드 성공 후 학생 데이터 다시 가져오기
+                if (currentBootcamp === 'all') {
+                    fetchStudents();
+                } else {
+                    fetchBootcampData(currentBootcamp);
+                }
+                
+                hideLoading();
+                showAlert(`${result.count}명의 학생 데이터가 성공적으로 업로드되었습니다.`);
+            } catch (error) {
+                hideLoading();
+                showAlert('파일 업로드 중 오류가 발생했습니다. 다시 시도해주세요.');
+                console.error('Error:', error);
+            }
+            
+            // 파일 입력 초기화
+            event.target.value = '';
+        }
+
+        // 더미 데이터 생성 (개발용)
+        function generateDummyData(count) {
+            const statuses = ['applying', 'accepted', 'considering', 'registered', 'canceled'];
+            const genders = ['남', '여'];
+            const names = ['김민수', '이지현', '박준호', '최수진', '정재원', '윤소희', '강대현', '황미나', '조성민', '한예은'];
+            
+            students = Array.from({ length: count }, (_, index) => {
+                const status = statuses[Math.floor(Math.random() * 5)];
+                let consideringReason = null;
+                
+                if (status === 'considering') {
+                    const reasonIndex = Math.floor(Math.random() * consideringReasons.length);
+                    consideringReason = consideringReasons[reasonIndex].value;
+                }
+                
+                return {
+                    id: index + 1,
+                    name: names[Math.floor(Math.random() * names.length)],
+                    gender: genders[Math.floor(Math.random() * 2)],
+                    age: Math.floor(Math.random() * 20) + 20,
+                    phone: `010-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`,
+                    email: `user${index+1}@example.com`,
+                    status,
+                    consideringReason,
+                    lastContactDate: new Date(Date.now() - Math.floor(Math.random() * 10) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                    notes: '',
+                    updatedAt: new Date().toISOString()
+                };
+            });
+            
+            // 초기 필터링 및 렌더링
+            filteredStudents = [...students];
+            renderStudentTable();
+            updateStats();
+            updateCharts();
+        }
+
+        // 부트캠프별 더미 데이터 생성 함수
+        function generateDummyDataForBootcamp(bootcampName, count) {
+            // 기존 generateDummyData 함수와 유사하지만 부트캠프명 추가
+            const statuses = ['applying', 'accepted', 'considering', 'registered', 'canceled'];
+            const genders = ['남', '여'];
+            const names = ['김민수', '이지현', '박준호', '최수진', '정재원', '윤소희', '강대현', '황미나', '조성민', '한예은'];
+            
+            students = Array.from({ length: count }, (_, index) => {
+                const status = statuses[Math.floor(Math.random() * 5)];
+                let consideringReason = null;
+                
+                if (status === 'considering') {
+                    const reasonIndex = Math.floor(Math.random() * consideringReasons.length);
+                    consideringReason = consideringReasons[reasonIndex].value;
+                }
+                
+                return {
+                    id: index + 1,
+                    name: names[Math.floor(Math.random() * names.length)],
+                    gender: genders[Math.floor(Math.random() * 2)],
+                    age: Math.floor(Math.random() * 20) + 20,
+                    phone: `010-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`,
+                    email: `user${index+1}@example.com`,
+                    status,
+                    bootcamp: bootcampName, // 부트캠프명 추가
+                    bootcampId: currentBootcamp, // 부트캠프 ID 추가
+                    consideringReason,
+                    lastContactDate: new Date(Date.now() - Math.floor(Math.random() * 10) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                    notes: '',
+                    updatedAt: new Date().toISOString()
+                };
+            });
+            
+            // 화면 업데이트
+            filteredStudents = [...students];
+            renderStudentTable();
+            updateStats();
+            updateCharts();
+        }
+
+        // 검색 처리 함수
+        function handleSearch(event) {
+            const term = event.target.value.trim().toLowerCase();
+            
+            if (term === '') {
+                handleTabChange(currentTab);
+            } else {
+                if (currentTab === 'all') {
+                    filteredStudents = students.filter(student => 
+                        student.name.toLowerCase().includes(term) || 
+                        student.phone.toLowerCase().includes(term) ||
+                        (student.email && student.email.toLowerCase().includes(term))
+                    );
+                } else {
+                    filteredStudents = students.filter(student => 
+                        student.status === currentTab && 
+                        (student.name.toLowerCase().includes(term) || 
+                        student.phone.toLowerCase().includes(term) ||
+                        (student.email && student.email.toLowerCase().includes(term)))
+                    );
+                }
+                
+                renderStudentTable();
+            }
+        }
+
+        // 탭 변경 처리 함수
+        function handleTabChange(tab) {
+            currentTab = tab;
+            
+            // 탭 버튼 스타일 업데이트
+            tabButtons.forEach(btn => {
+                if (btn.dataset.tab === tab) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+            
+            // 학생 데이터 필터링
+            if (tab === 'all') {
+                filteredStudents = [...students];
+            } else {
+                filteredStudents = students.filter(student => student.status === tab);
+            }
+            
+            // 검색어가 있는 경우 추가 필터링
+            const term = searchInput.value.trim().toLowerCase();
+            if (term !== '') {
+                filteredStudents = filteredStudents.filter(student => 
+                    student.name.toLowerCase().includes(term) || 
+                    student.phone.toLowerCase().includes(term) ||
+                    (student.email && student.email.toLowerCase().includes(term))
+                );
+            }
+            
+            renderStudentTable();
+        }
+
+        // 학생 상태 변경 처리 함수
+        function handleStatusChange(studentId, newStatus) {
+            if (newStatus === 'considering') {
+                // 고민중 상태는 이유 선택 모달 표시
+                activeStudentId = studentId;
+                reasonModal.style.display = 'flex';
+            } else {
+                updateStudentStatus(studentId, newStatus);
+            }
+        }
+
+        // 상태 변경 확인 처리 함수
+        function confirmReasonChange() {
+            const selectedReason = document.querySelector('input[name="consideringReason"]:checked');
+            
+            if (selectedReason) {
+                updateStudentStatus(activeStudentId, 'considering', selectedReason.value);
+            } else {
+                alert('고민 이유를 선택해주세요.');
+                return;
+            }
+            
+            closeReasonModal();
+        }
+
+        // 학생 상태 업데이트 함수
+        async function updateStudentStatus(studentId, newStatus, reason = null) {
+            try {
+                const updatedData = {
+                    status: newStatus,
+                    consideringReason: newStatus === 'considering' ? reason : null,
+                    lastContactDate: new Date().toISOString().split('T')[0] // 마지막 연락일 업데이트
+                };
+                
+                // 서버에 상태 업데이트 요청
+                // 부트캠프별 API 엔드포인트 사용
+                let apiUrl = currentBootcamp === 'all' 
+                    ? `${API_URL}/students/${studentId}`
+                    : `${API_URL}/bootcamps/${currentBootcamp}/students/${studentId}`;
+                    
+                const response = await fetch(apiUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updatedData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('학생 상태 업데이트 중 오류가 발생했습니다.');
+                }
+                
+                // 로컬 데이터 업데이트
+                students = students.map(student => {
+                    if (student.id === studentId) {
+                        return {
+                            ...student,
+                            ...updatedData,
+                            updatedAt: new Date().toISOString()
+                        };
+                    }
+                    return student;
+                });
+                
+                // 화면 업데이트
+                handleTabChange(currentTab);
+                updateStats();
+                updateCharts();
+            } catch (error) {
+                console.error('상태 업데이트 오류:', error);
+                
+                // 오프라인 모드를 위한 대비책
+                students = students.map(student => {
+                    if (student.id === studentId) {
+                        return {
+                            ...student,
+                            status: newStatus,
+                            consideringReason: newStatus === 'considering' ? reason : null,
+                            lastContactDate: new Date().toISOString().split('T')[0],
+                            updatedAt: new Date().toISOString()
+                        };
+                    }
+                    return student;
+                });
+                
+                // 화면 업데이트
+                handleTabChange(currentTab);
+                updateStats();
+                
+                alert('서버 연결 실패: 변경사항이 임시로 저장되었습니다.');
+            }
+        }
+
+        // 노트 변경 처리 함수
+        async function handleNoteChange(studentId, note) {
+            try {
+                // 서버에 노트 업데이트 요청
+                // 부트캠프별 API 엔드포인트 사용
+                let apiUrl = currentBootcamp === 'all' 
+                    ? `${API_URL}/students/${studentId}`
+                    : `${API_URL}/bootcamps/${currentBootcamp}/students/${studentId}`;
+                    
+                const response = await fetch(apiUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ notes: note })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('메모 업데이트 중 오류가 발생했습니다.');
+                }
+                
+                // 로컬 데이터 업데이트
+                students = students.map(student => {
+                    if (student.id === studentId) {
+                        return {
+                            ...student,
+                            notes: note,
+                            updatedAt: new Date().toISOString()
+                        };
+                    }
+                    return student;
+                });
+            } catch (error) {
+                console.error('메모 업데이트 오류:', error);
+                
+                // 오프라인 모드를 위한 대비책
+                students = students.map(student => {
+                    if (student.id === studentId) {
+                        return {
+                            ...student,
+                            notes: note,
+                            updatedAt: new Date().toISOString()
+                        };
+                    }
+                    return student;
+                });
+            }
+        }
+
+        // 학생 테이블 렌더링 함수
+        function renderStudentTable() {
+            studentTableBody.innerHTML = '';
+            
+            // 현재 선택된 부트캠프 표시
+            const currentBootcampName = document.getElementById('currentBootcamp').textContent;
+            
+            if (filteredStudents.length === 0) {
+                const emptyRow = document.createElement('tr');
+                emptyRow.innerHTML = `
+                    <td colspan="9" style="text-align: center; padding: 2rem;">
+                        ${currentBootcampName}에 등록된 데이터가 없습니다.
+                    </td>
+                `;
+                studentTableBody.appendChild(emptyRow);
+                return;
+            }
+            
+            filteredStudents.forEach(student => {
+                const row = document.createElement('tr');
+                
+                // 고민중 상태일 때 이유 텍스트 가져오기
+                let reasonText = '';
+                if (student.status === 'considering' && student.consideringReason) {
+                    const reasonObj = consideringReasons.find(r => r.value === student.consideringReason);
+                    reasonText = reasonObj ? reasonObj.label : '';
+                }
+                
+                // 상태에 따른 배지 클래스
+                const badgeClass = `badge-${student.status}`;
+                
+                row.innerHTML = `
+                    <td>${student.name}</td>
+                    <td>${student.gender || ''}</td>
+                    <td>${student.age}세</td>
+                    <td>
+                        <div class="phone-container">
+                            ${student.phone}
+                            <i class="fas fa-phone phone-icon" onclick="callStudent('${student.phone}')"></i>
+                        </div>
+                    </td>
+                    <td>${student.email || ''}</td>
+                    <td>
+                        <div>
+                            <span class="status-badge ${badgeClass}">
+                                ${statusOptions[student.status]}
+                            </span>
+                            ${reasonText ? `<div class="reason-text">${reasonText}</div>` : ''}
+                        </div>
+                    </td>
+                    <td>${student.lastContactDate}</td>
+                    <td>
+                        <input
+                            type="text"
+                            class="note-input"
+                            placeholder="메모 추가..."
+                            value="${student.notes || ''}"
+                            onchange="handleNoteChange(${student.id}, this.value)"
+                        >
+                    </td>
+                    <td>
+                        <select
+                            class="status-select"
+                            onchange="handleStatusChange(${student.id}, this.value)"
+                        >
+                            ${Object.entries(statusOptions).map(([value, label]) => `
+                                <option value="${value}" ${student.status === value ? 'selected' : ''}>
+                                    ${label}
+                                </option>
+                            `).join('')}
+                        </select>
+                    </td>
+                `;
+                
+                studentTableBody.appendChild(row);
+            });
+        }
+
+        // 전화 아이콘 클릭 시 전화번호 복사 또는 전화 앱 연결
+        function callStudent(phoneNumber) {
+            // 모바일 기기인 경우 직접 전화 걸기
+            if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                window.location.href = `tel:${phoneNumber.replace(/-/g, '')}`;
+            } else {
+                // 데스크톱인 경우 클립보드에 복사
+                navigator.clipboard.writeText(phoneNumber)
+                    .then(() => {
+                        alert(`전화번호 ${phoneNumber}가 클립보드에 복사되었습니다.`);
+                    })
+                    .catch(err => {
+                        console.error('전화번호 복사 실패:', err);
+                    });
+            }
+        }
+
+        // 통계 업데이트 함수
+        function updateStats() {
+            const stats = {
+                total: students.length,
+                applying: students.filter(s => s.status === 'applying').length,
+                accepted: students.filter(s => s.status === 'accepted').length,
+                considering: students.filter(s => s.status === 'considering').length,
+                registered: students.filter(s => s.status === 'registered').length,
+                canceled: students.filter(s => s.status === 'canceled').length
+            };
+            
+            // 통계 숫자 업데이트
+            document.getElementById('totalCount').textContent = `${stats.total}명`;
+            document.getElementById('applyingCount').textContent = `${stats.applying}명`;
+            document.getElementById('acceptedCount').textContent = `${stats.accepted}명`;
+            document.getElementById('consideringCount').textContent = `${stats.considering}명`;
+            document.getElementById('registeredCount').textContent = `${stats.registered}명`;
+            document.getElementById('canceledCount').textContent = `${stats.canceled}명`;
+            
+            // 탭 카운트 업데이트
+            document.getElementById('tabTotalCount').textContent = stats.total;
+            document.getElementById('tabApplyingCount').textContent = stats.applying;
+            document.getElementById('tabAcceptedCount').textContent = stats.accepted;
+            document.getElementById('tabConsideringCount').textContent = stats.considering;
+            document.getElementById('tabRegisteredCount').textContent = stats.registered;
+            document.getElementById('tabCanceledCount').textContent = stats.canceled;
+        }
+
+        // 차트 초기화 함수
+        function initCharts() {
+            // 상태 파이 차트
+            const statusCtx = document.getElementById('statusPieChart').getContext('2d');
+            statusPieChart = new Chart(statusCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.values(statusOptions),
+                    datasets: [{
+                        data: [0, 0, 0, 0, 0],
+                        backgroundColor: [
+                            '#8884d8', // 지원중
+                            '#83a6ed', // 합격 처리
+                            '#ffc658', // 고민중
+                            '#82ca9d', // HRD 최종 등록
+                            '#ff8042'  // 수강 취소
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12,
+                                font: {
+                                    size: 10
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // 고민중 이유 막대 차트
+            const reasonCtx = document.getElementById('reasonBarChart').getContext('2d');
+            reasonBarChart = new Chart(reasonCtx, {
+                type: 'bar',
+                data: {
+                    labels: consideringReasons.map(r => r.label),
+                    datasets: [{
+                        label: '인원수',
+                        data: [0, 0, 0, 0, 0],
+                        backgroundColor: '#ffc658'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+            
+            // 고민중 이유 차트 컨테이너 초기 숨김 (데이터가 없을 때)
+            document.getElementById('reasonChartContainer').style.display = 'none';
+        }
+
+        // 차트 데이터 업데이트 함수
+        function updateCharts() {
+            // 파이 차트 데이터 업데이트
+            const pieData = [
+                students.filter(s => s.status === 'applying').length,
+                students.filter(s => s.status === 'accepted').length,
+                students.filter(s => s.status === 'considering').length,
+                students.filter(s => s.status === 'registered').length,
+                students.filter(s => s.status === 'canceled').length
+            ];
+            
+            statusPieChart.data.datasets[0].data = pieData;
+            statusPieChart.update();
+            
+            // 고민중 이유 차트 데이터 업데이트
+            const reasonData = consideringReasons.map(reason => 
+                students.filter(s => s.status === 'considering' && s.consideringReason === reason.value).length
+            );
+            
+            reasonBarChart.data.datasets[0].data = reasonData;
+            reasonBarChart.update();
+            
+            // 고민중인 학생이 있을 때만 차트 표시
+            const consideringCount = students.filter(s => s.status === 'considering').length;
+            document.getElementById('reasonChartContainer').style.display = consideringCount > 0 ? 'block' : 'none';
+        }
+
+        // 모달 닫기 함수
+        function closeReasonModal() {
+            reasonModal.style.display = 'none';
+            activeStudentId = null;
+            document.querySelectorAll('input[name="consideringReason"]').forEach(input => {
+                input.checked = false;
+            });
+        }
+
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', init);
+        
+        // 전역 함수 정의 (HTML에서 직접 호출 가능하도록)
+        window.handleStatusChange = handleStatusChange;
+        window.handleNoteChange = handleNoteChange;
+        window.callStudent = callStudent;
+
+        function showLoading() {
+            document.getElementById('loadingModal').style.display = 'block';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingModal').style.display = 'none';
+        }
+
+        function showAlert(message) {
+            document.getElementById('alertMessage').textContent = message;
+            document.getElementById('alertModal').style.display = 'block';
+        }
+
+        function closeAlertModal() {
+            document.getElementById('alertModal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

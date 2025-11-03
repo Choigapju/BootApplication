@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>지원 추이 분석 - KDT 교육 지원자 관리</title>
+    <!-- Pretendard 폰트 CDN -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+    <style>
+        :root {
+            --main-orange: #FF7710;
+            --main-bg: #FFFAF5;
+            --main-dark: #3F3F3F;
+            --main-white: #fff;
+            --main-shadow: 0 2px 8px rgba(63,63,63,0.06);
+        }
+        body {
+            font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
+            background: #f8f9fa;
+            color: var(--main-dark);
+            margin: 0;
+            padding: 0;
+        }
+        .header {
+            background: var(--main-white);
+            box-shadow: var(--main-shadow);
+            padding: 24px 0 16px 0;
+            text-align: center;
+            width: 100%;
+        }
+        .header-title {
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: var(--main-dark);
+            letter-spacing: -1px;
+        }
+        .main-header {
+            width: 100vw;
+            background: #FF7710;
+            color: #fff;
+            font-size: 2rem;
+            font-weight: 900;
+            padding: 24px 0 18px 32px;
+            letter-spacing: -1px;
+            box-sizing: border-box;
+        }
+        .section {
+            background: var(--main-white);
+            border-radius: 18px;
+            box-shadow: var(--main-shadow);
+            margin: 32px 0;
+            padding: 32px 3vw;
+            max-width: 100vw;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        h2 {
+            font-weight: 800;
+            margin-top: 0;
+            color: var(--main-dark);
+            margin-bottom: 24px;
+        }
+        .trend-controls {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            background: var(--main-bg);
+            color: var(--main-dark);
+            border: 2px solid var(--main-orange);
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab-btn.active {
+            background: var(--main-orange);
+            color: white;
+        }
+        .tab-btn:hover {
+            background: var(--main-orange);
+            color: white;
+        }
+        select, input {
+            border: 1.5px solid var(--main-orange);
+            border-radius: 8px;
+            padding: 8px 12px;
+            background: var(--main-bg);
+            color: var(--main-dark);
+            font-size: 1rem;
+        }
+        .chart-container {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--main-shadow);
+            margin-top: 20px;
+        }
+        #trendChart {
+            width: 100% !important;
+            height: 400px !important;
+        }
+        .stats-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: var(--main-bg);
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+        }
+        .stat-card .label {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        .stat-card .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--main-orange);
+        }
+        .back-btn {
+            background: var(--main-orange);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 16px;
+        }
+        .back-btn:hover {
+            background: #e65c00;
+        }
+        #dailyStatsTable {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: #fff;
+            font-size: 1.05rem;
+            margin-top: 8px;
+        }
+        #dailyStatsTable th, #dailyStatsTable td {
+            padding: 10px 0;
+            border-bottom: 1.5px solid #f2f2f2;
+            text-align: center;
+        }
+        #dailyStatsTable th {
+            background: #FFFAF5;
+            color: #3F3F3F;
+            font-weight: 800;
+            text-align: center;
+            border-bottom: 2.5px solid #FF7710;
+        }
+        #dailyStatsTable td.date-col {
+            color: #444;
+            font-weight: 600;
+            padding-left: 12px;
+        }
+        #dailyStatsTable tr:hover {
+            background: #FFF3E5;
+        }
+        #dailyStatsTable td, #dailyStatsTable th {
+            min-width: 90px;
+        }
+        #dailyStatsTable th:not(:last-child), #dailyStatsTable td:not(:last-child) {
+            border-right: 1.5px solid #f2f2f2;
+        }
+        @media (max-width: 900px) {
+            #dailyStatsTable th, #dailyStatsTable td { font-size: 0.95rem; min-width: 60px; padding: 7px 0; }
+        }
+        .compare-controls {
+            background: var(--main-bg);
+            border: 2px solid var(--main-orange);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        .compare-mode-selector {
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .compare-mode-selector label {
+            font-weight: 700;
+            color: var(--main-dark);
+            font-size: 1rem;
+            margin-bottom: 12px;
+            display: block;
+        }
+        .mode-buttons {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        .mode-btn {
+            background: var(--main-white);
+            color: var(--main-dark);
+            border: 2px solid var(--main-orange);
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+        .mode-btn.active {
+            background: var(--main-orange);
+            color: white;
+        }
+        .mode-btn:hover {
+            background: var(--main-orange);
+            color: white;
+        }
+        .mode-description {
+            font-size: 0.85rem;
+            color: #666;
+            font-style: italic;
+        }
+        .compare-selectors {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 16px;
+        }
+        .compare-selector {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .compare-selector label {
+            font-weight: 700;
+            color: var(--main-dark);
+            font-size: 0.95rem;
+        }
+        .compare-selector select {
+            width: 100%;
+            border: 1.5px solid var(--main-orange);
+            border-radius: 8px;
+            padding: 10px 12px;
+            background: var(--main-white);
+            color: var(--main-dark);
+            font-size: 1rem;
+        }
+        .compare-btn {
+            background: var(--main-orange);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1rem;
+        }
+        .compare-btn:hover {
+            background: #e65c00;
+        }
+        .compare-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        /* 이벤트 코멘트 관련 스타일 */
+        .comment-controls {
+            background: var(--main-bg);
+            border: 2px solid var(--main-orange);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        .comment-form {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+            margin-bottom: 16px;
+        }
+        .comment-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .comment-input-group label {
+            font-weight: 700;
+            color: var(--main-dark);
+            font-size: 0.9rem;
+        }
+        .comment-input-group input,
+        .comment-input-group textarea {
+            border: 1.5px solid var(--main-orange);
+            border-radius: 8px;
+            padding: 8px 12px;
+            background: var(--main-white);
+            color: var(--main-dark);
+            font-size: 1rem;
+        }
+        .comment-input-group textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+        .comment-btn {
+            background: var(--main-orange);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+        .comment-btn:hover {
+            background: #e65c00;
+        }
+        .comment-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .comments-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: var(--main-white);
+        }
+        .comment-item {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .comment-item:last-child {
+            border-bottom: none;
+        }
+        .comment-content {
+            flex: 1;
+        }
+        .comment-date {
+            font-weight: 700;
+            color: var(--main-orange);
+            font-size: 0.9rem;
+            margin-bottom: 4px;
+        }
+        .comment-text {
+            color: var(--main-dark);
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        .comment-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .comment-edit-btn,
+        .comment-delete-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.8rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        .comment-edit-btn {
+            color: #007bff;
+        }
+        .comment-edit-btn:hover {
+            background: #e3f2fd;
+        }
+        .comment-delete-btn {
+            color: #dc3545;
+        }
+        .comment-delete-btn:hover {
+            background: #ffebee;
+        }
+        .comment-bootcamp {
+            font-size: 0.8rem;
+            color: #666;
+            font-style: italic;
+            margin-top: 4px;
+        }
+        
+        @media (max-width: 768px) {
+            .trend-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .compare-selectors {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+            .section {
+                padding: 20px 4vw;
+            }
+            #trendChart {
+                height: 300px !important;
+            }
+            .comment-form {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .comment-input-group {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-header">
+        <a href="/" class="back-btn" style="color:inherit;text-decoration:none;cursor:pointer;">
+            <span>KDT 교육 지원자 관리 시스템</span>
+        </a>
+    </div>
+    
+    <div class="section">
+        <a href="/" class="back-btn">← 메인으로 돌아가기</a>
+        <h2>지원 추이 분석</h2>
+        
+        <div class="trend-controls">
+            <button class="tab-btn active" data-tab="daily">일별 추이</button>
+            <button class="tab-btn" data-tab="weekly">주별 추이</button>
+            <button class="tab-btn" data-tab="compare">부트캠프 비교</button>
+            <button class="tab-btn" data-tab="table">일자별 통계표</button>
+            <select id="periodFilter">
+                <option value="7">최근 7일</option>
+                <option value="30">최근 30일</option>
+                <option value="90">최근 90일</option>
+                <option value="all">전체</option>
+            </select>
+            <select id="bootcampFilter">
+                <option value="">전체 부트캠프</option>
+            </select>
+        </div>
+        
+        <!-- 부트캠프 비교 컨트롤 -->
+        <div class="compare-controls" id="compareControls" style="display:none;">
+            <div class="compare-mode-selector">
+                <label>비교 모드:</label>
+                <div class="mode-buttons">
+                    <button class="mode-btn active" data-mode="date">날짜별 비교</button>
+                    <button class="mode-btn" data-mode="week_number">주차별 비교</button>
+                </div>
+                <div class="mode-description">
+                    <span id="modeDescription">날짜별 비교: 실제 날짜 기준으로 비교</span>
+                </div>
+            </div>
+            <div class="compare-selectors">
+                <div class="compare-selector">
+                    <label>첫 번째 부트캠프:</label>
+                    <select id="bootcamp1Filter">
+                        <option value="">선택하세요</option>
+                    </select>
+                </div>
+                <div class="compare-selector">
+                    <label>두 번째 부트캠프:</label>
+                    <select id="bootcamp2Filter">
+                        <option value="">선택하세요</option>
+                    </select>
+                </div>
+            </div>
+            <button class="compare-btn" id="compareBtn">비교하기</button>
+        </div>
+        
+        <!-- 이벤트 코멘트 컨트롤 -->
+        <div class="comment-controls" id="commentControls">
+            <h3 style="margin-top: 0; margin-bottom: 16px; color: var(--main-dark);">📝 이벤트 코멘트</h3>
+            <div class="comment-form">
+                <div class="comment-input-group">
+                    <label for="commentDate">날짜:</label>
+                    <input type="date" id="commentDate" required>
+                </div>
+                <div class="comment-input-group" style="flex: 1;">
+                    <label for="commentText">이벤트 내용:</label>
+                    <textarea id="commentText" placeholder="예) 모집 10일차 사전설명회 진행 / 모객 20일차 광고소재 변경 후 라이브" required></textarea>
+                </div>
+                <button class="comment-btn" id="addCommentBtn">코멘트 추가</button>
+            </div>
+            <div style="margin-top: 12px; padding: 8px 12px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 6px; font-size: 0.9rem; color: #856404;">
+                💡 <strong>사용법:</strong> 코멘트를 추가하면 차트의 해당 날짜에 📝 아이콘이 표시됩니다. 아이콘에 마우스를 올리면 코멘트 내용을 확인할 수 있습니다.
+            </div>
+            <div style="margin-top: 12px;">
+                <button class="comment-btn" id="manageCommentsBtn" style="background: #6c757d; font-size: 0.85rem; padding: 6px 12px;">코멘트 관리</button>
+            </div>
+            <div id="commentsManagement" style="display: none; margin-top: 12px; border: 1px solid #dee2e6; border-radius: 8px; background: #f8f9fa; padding: 12px;">
+                <h4 style="margin: 0 0 8px 0; font-size: 0.95rem;">등록된 코멘트 목록</h4>
+                <div id="commentsList" style="max-height: 150px; overflow-y: auto;"></div>
+            </div>
+        </div>
+        
+        <div class="stats-summary" id="statsSummary">
+            <div class="stat-card">
+                <div class="label">총 지원자</div>
+                <div class="value" id="totalApplicants">0명</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">평균 일일 지원</div>
+                <div class="value" id="avgDaily">0명</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">최고 일일 지원</div>
+                <div class="value" id="maxDaily">0명</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">최근 지원</div>
+                <div class="value" id="recentApplicants">0명</div>
+            </div>
+        </div>
+        
+        <div class="chart-container" id="chartContainer">
+            <canvas id="trendChart"></canvas>
+        </div>
+        <div class="chart-container" id="tableContainer" style="display:none;">
+            <table id="dailyStatsTable" style="width:100%; border-collapse:collapse;">
+                <thead>
+                    <tr style="background:#FFFAF5;">
+                        <th>날짜</th>
+                        <th>지원완료</th>
+                        <th>합격</th>
+                        <th>예비합격</th>
+                        <th>지원취소</th>
+                        <th>불합격</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <script>
+        let currentChart = null;
+        let currentTab = 'daily';
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            loadBootcampOptions();
+            fetchTrends();
+            loadComments(); // 코멘트 로드
+            
+            // 오늘 날짜를 기본값으로 설정
+            document.getElementById('commentDate').value = new Date().toISOString().split('T')[0];
+            
+            // 탭 변경 이벤트
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.onclick = function() {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentTab = this.getAttribute('data-tab');
+                    
+                    // 비교 컨트롤 표시/숨김
+                    if(currentTab === 'compare') {
+                        document.getElementById('compareControls').style.display = '';
+                        document.getElementById('chartContainer').style.display = '';
+                        document.getElementById('statsSummary').style.display = 'none';
+                        document.getElementById('tableContainer').style.display = 'none';
+                        loadCompareBootcampOptions();
+                    } else if(currentTab === 'table') {
+                        document.getElementById('compareControls').style.display = 'none';
+                        document.getElementById('chartContainer').style.display = 'none';
+                        document.getElementById('statsSummary').style.display = 'none';
+                        document.getElementById('tableContainer').style.display = '';
+                        fetchDailyStatsTable();
+                    } else {
+                        document.getElementById('compareControls').style.display = 'none';
+                        document.getElementById('chartContainer').style.display = '';
+                        document.getElementById('statsSummary').style.display = '';
+                        document.getElementById('tableContainer').style.display = 'none';
+                        fetchTrends();
+                    }
+                };
+            });
+            // 필터 변경 이벤트
+            document.getElementById('periodFilter').addEventListener('change', function() {
+                if(currentTab === 'table') fetchDailyStatsTable();
+                else if(currentTab === 'compare') fetchCompareData();
+                else fetchTrends();
+                loadComments(); // 코멘트도 함께 새로고침
+            });
+            document.getElementById('bootcampFilter').addEventListener('change', function() {
+                if(currentTab === 'table') fetchDailyStatsTable();
+                else if(currentTab === 'compare') fetchCompareData();
+                else fetchTrends();
+                loadComments(); // 코멘트도 함께 새로고침
+            });
+            
+            // 비교하기 버튼 이벤트
+            document.getElementById('compareBtn').addEventListener('click', function() {
+                fetchCompareData();
+            });
+            
+            // 비교 모드 버튼 이벤트
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    updateModeDescription();
+                });
+            });
+            
+            // 코멘트 추가 버튼 이벤트
+            document.getElementById('addCommentBtn').addEventListener('click', function() {
+                addComment();
+            });
+            
+            // 코멘트 텍스트 엔터키 이벤트
+            document.getElementById('commentText').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && e.ctrlKey) {
+                    addComment();
+                }
+            });
+            
+            // 코멘트 관리 버튼 이벤트
+            document.getElementById('manageCommentsBtn').addEventListener('click', function() {
+                const managementDiv = document.getElementById('commentsManagement');
+                const commentsList = document.getElementById('commentsList');
+                
+                if (managementDiv.style.display === 'none') {
+                    managementDiv.style.display = 'block';
+                    this.textContent = '코멘트 관리 닫기';
+                    // 코멘트 목록 로드
+                    loadCommentsList();
+                } else {
+                    managementDiv.style.display = 'none';
+                    this.textContent = '코멘트 관리';
+                }
+            });
+        });
+        
+        // 비교 모드 설명 업데이트
+        function updateModeDescription() {
+            const activeMode = document.querySelector('.mode-btn.active').getAttribute('data-mode');
+            const description = document.getElementById('modeDescription');
+            
+            if (activeMode === 'date') {
+                description.textContent = '날짜별 비교: 실제 날짜 기준으로 비교';
+            } else {
+                description.textContent = '주차별 비교: 각 부트캠프의 모집 시작일을 1주차로 하여 비교';
+            }
+        }
+        
+        // 부트캠프 옵션 로드
+        async function loadBootcampOptions() {
+            try {
+                const res = await fetch('/bootcamps');
+                const data = await res.json();
+                const select = document.getElementById('bootcampFilter');
+                
+                const unique = Array.from(new Set(data.map(b => b.name + '||' + b.generation)))
+                    .map(str => {
+                        const [name, generation] = str.split('||');
+                        return {name, generation};
+                    });
+                
+                unique.forEach(b => {
+                    const label = b.name + (b.generation ? ' / ' + b.generation : '');
+                    const value = b.name + '||' + b.generation;
+                    const opt = document.createElement('option');
+                    opt.value = value;
+                    opt.innerText = label;
+                    select.appendChild(opt);
+                });
+            } catch (error) {
+                console.error('부트캠프 로드 실패:', error);
+            }
+        }
+        
+        // 비교용 부트캠프 옵션 로드
+        async function loadCompareBootcampOptions() {
+            try {
+                const res = await fetch('/bootcamps');
+                const data = await res.json();
+                const select1 = document.getElementById('bootcamp1Filter');
+                const select2 = document.getElementById('bootcamp2Filter');
+                
+                // 기존 옵션 제거 (첫 번째 옵션 제외)
+                select1.innerHTML = '<option value="">선택하세요</option>';
+                select2.innerHTML = '<option value="">선택하세요</option>';
+                
+                const unique = Array.from(new Set(data.map(b => b.name + '||' + b.generation)))
+                    .map(str => {
+                        const [name, generation] = str.split('||');
+                        return {name, generation};
+                    });
+                
+                unique.forEach(b => {
+                    const label = b.name + (b.generation ? ' / ' + b.generation : '');
+                    const value = b.name + '||' + b.generation;
+                    
+                    // 첫 번째 부트캠프 옵션
+                    const opt1 = document.createElement('option');
+                    opt1.value = value;
+                    opt1.innerText = label;
+                    select1.appendChild(opt1);
+                    
+                    // 두 번째 부트캠프 옵션
+                    const opt2 = document.createElement('option');
+                    opt2.value = value;
+                    opt2.innerText = label;
+                    select2.appendChild(opt2);
+                });
+            } catch (error) {
+                console.error('비교 부트캠프 로드 실패:', error);
+            }
+        }
+        
+        // 추이 데이터 가져오기
+        async function fetchTrends() {
+            const period = document.getElementById('periodFilter').value;
+            const bootcamp = document.getElementById('bootcampFilter').value;
+            
+            try {
+                const url = currentTab === 'daily' 
+                    ? `/trends/daily_applications?period=${period}&bootcamp=${encodeURIComponent(bootcamp)}`
+                    : `/trends/weekly_applications?period=${period}&bootcamp=${encodeURIComponent(bootcamp)}`;
+                
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                if (res.ok) {
+                    renderChart(data);
+                    updateStats(data);
+                } else {
+                    console.error('데이터 로드 실패:', data.error);
+                }
+            } catch (error) {
+                console.error('네트워크 오류:', error);
+            }
+        }
+        
+        // 비교 데이터 가져오기
+        async function fetchCompareData() {
+            const period = document.getElementById('periodFilter').value;
+            const bootcamp1 = document.getElementById('bootcamp1Filter').value;
+            const bootcamp2 = document.getElementById('bootcamp2Filter').value;
+            const compareMode = document.querySelector('.mode-btn.active').getAttribute('data-mode');
+            
+            // 최소 하나의 부트캠프는 선택되어야 함
+            if (!bootcamp1 && !bootcamp2) {
+                alert('최소 하나의 부트캠프를 선택해주세요.');
+                return;
+            }
+            
+            try {
+                const url = `/trends/compare_bootcamps?period=${period}&bootcamp1=${encodeURIComponent(bootcamp1)}&bootcamp2=${encodeURIComponent(bootcamp2)}&type=${currentTab === 'daily' ? 'daily' : 'weekly'}&mode=${compareMode}`;
+                
+                const res = await fetch(url);
+                const data = await res.json();
+                
+                if (res.ok) {
+                    renderCompareChart(data);
+                } else {
+                    console.error('비교 데이터 로드 실패:', data.error);
+                }
+            } catch (error) {
+                console.error('네트워크 오류:', error);
+            }
+        }
+        
+        // 차트 렌더링
+        function renderChart(data) {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            
+            if (currentChart) {
+                currentChart.destroy();
+            }
+            
+            const labels = data.labels || [];
+            const datasets = data.datasets || [];
+            
+            // 코멘트가 있는 날짜에 대한 표시 추가
+            const commentAnnotations = [];
+            const bootcamp = document.getElementById('bootcampFilter').value;
+            
+            // 코멘트 데이터 가져오기 (비동기로 처리)
+            fetch(`/event_comments?bootcamp_filter=${encodeURIComponent(bootcamp)}`)
+                .then(res => res.json())
+                .then(comments => {
+                    comments.forEach(comment => {
+                        const commentDate = comment.date;
+                        const labelIndex = labels.findIndex(label => {
+                            if (currentTab === 'daily') {
+                                return label === commentDate;
+                            } else {
+                                // 주별 데이터의 경우 날짜 범위 확인
+                                return label.includes(commentDate) || commentDate.includes(label);
+                            }
+                        });
+                        
+                        if (labelIndex !== -1) {
+                            // 코멘트가 있는 날짜에 더 눈에 띄는 표시 추가
+                            commentAnnotations.push({
+                                type: 'point',
+                                xValue: labelIndex,
+                                yValue: datasets[0]?.data[labelIndex] || 0,
+                                backgroundColor: 'rgba(255, 119, 16, 0.9)',
+                                borderColor: 'rgba(255, 119, 16, 1)',
+                                borderWidth: 3,
+                                radius: 8,
+                                label: {
+                                    content: '📝',
+                                    enabled: true,
+                                    position: 'top',
+                                    font: {
+                                        size: 16,
+                                        weight: 'bold'
+                                    },
+                                    color: 'rgba(255, 119, 16, 1)',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                                    padding: 4,
+                                    borderRadius: 4
+                                }
+                            });
+                            
+                            // 코멘트 내용을 툴팁으로 표시하기 위한 커스텀 플러그인
+                            if (!currentChart.options.plugins.tooltip) {
+                                currentChart.options.plugins.tooltip = {};
+                            }
+                            
+                            // 기존 툴팁 콜백 저장
+                            const originalCallbacks = currentChart.options.plugins.tooltip.callbacks || {};
+                            
+                            currentChart.options.plugins.tooltip.callbacks = {
+                                ...originalCallbacks,
+                                afterBody: function(context) {
+                                    const dataIndex = context[0].dataIndex;
+                                    const comment = comments.find(c => {
+                                        const cDate = c.date;
+                                        const label = labels[dataIndex];
+                                        if (currentTab === 'daily') {
+                                            return label === cDate;
+                                        } else {
+                                            return label.includes(cDate) || cDate.includes(label);
+                                        }
+                                    });
+                                    
+                                    if (comment) {
+                                        return [
+                                            '',
+                                            '📝 이벤트 코멘트:',
+                                            comment.comment
+                                        ];
+                                    }
+                                    return originalCallbacks.afterBody ? originalCallbacks.afterBody(context) : [];
+                                }
+                            };
+                        }
+                    });
+                    
+                    // 차트 업데이트
+                    if (currentChart) {
+                        currentChart.options.plugins.annotation = {
+                            annotations: commentAnnotations
+                        };
+                        currentChart.update();
+                    }
+                })
+                .catch(error => {
+                    console.error('코멘트 데이터 로드 실패:', error);
+                });
+            
+            currentChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: currentTab === 'daily' ? '일별 지원 완료자 추이' : '주별 지원 완료자 추이',
+                            font: {
+                                size: 16,
+                                weight: 'bold'
+                            }
+                        },
+                        legend: {
+                            position: 'top'
+                        },
+                        annotation: {
+                            annotations: commentAnnotations
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 비교 차트 렌더링
+        function renderCompareChart(data) {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            
+            if (currentChart) {
+                currentChart.destroy();
+            }
+            
+            const labels = data.labels || [];
+            const datasets = data.datasets || [];
+            const compareMode = document.querySelector('.mode-btn.active').getAttribute('data-mode');
+            
+            let titleText = '';
+            if (compareMode === 'week_number') {
+                titleText = currentTab === 'daily' ? '부트캠프별 주차별 지원 완료자 비교 (모집 시작일 기준)' : '부트캠프별 주차별 지원 완료자 비교 (모집 시작일 기준)';
+            } else {
+                titleText = currentTab === 'daily' ? '부트캠프별 일별 지원 완료자 비교' : '부트캠프별 주별 지원 완료자 비교';
+            }
+            
+            currentChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: titleText,
+                            font: {
+                                size: 16,
+                                weight: 'bold'
+                            }
+                        },
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 통계 업데이트
+        function updateStats(data) {
+            const stats = data.stats || {};
+            document.getElementById('totalApplicants').innerText = (stats.total || 0) + '명';
+            document.getElementById('avgDaily').innerText = (stats.average || 0) + '명';
+            document.getElementById('maxDaily').innerText = (stats.max || 0) + '명';
+            document.getElementById('recentApplicants').innerText = (stats.recent || 0) + '명';
+        }
+
+        // 일자별 통계표 데이터 가져오기
+        async function fetchDailyStatsTable() {
+            const period = document.getElementById('periodFilter').value;
+            const bootcamp = document.getElementById('bootcampFilter').value;
+            try {
+                const url = `/trends/daily_stats_table?period=${period}&bootcamp=${encodeURIComponent(bootcamp)}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                renderDailyStatsTable(data);
+            } catch (error) {
+                renderDailyStatsTable([]);
+            }
+        }
+        // 표 렌더링
+        function renderDailyStatsTable(data) {
+            const tbody = document.querySelector('#dailyStatsTable tbody');
+            tbody.innerHTML = '';
+            if(!data || !data.length) {
+                const tr = document.createElement('tr');
+                const td = document.createElement('td');
+                td.colSpan = 6;
+                td.innerText = '데이터가 없습니다.';
+                td.style.textAlign = 'center';
+                tr.appendChild(td);
+                tbody.appendChild(tr);
+                return;
+            }
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="date-col">${row.date}</td>
+                    <td>${row['지원완료']}</td>
+                    <td>${row['합격']}</td>
+                    <td>${row['예비합격']}</td>
+                    <td>${row['지원취소']}</td>
+                    <td>${row['불합격']}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+        
+        // 코멘트 관련 함수들
+        async function loadComments() {
+            try {
+                const period = document.getElementById('periodFilter').value;
+                const bootcamp = document.getElementById('bootcampFilter').value;
+                
+                // 기간에 따른 시작일과 종료일 계산
+                const endDate = new Date().toISOString().split('T')[0];
+                let startDate = new Date();
+                
+                if (period === '7') {
+                    startDate.setDate(startDate.getDate() - 7);
+                } else if (period === '30') {
+                    startDate.setDate(startDate.getDate() - 30);
+                } else if (period === '90') {
+                    startDate.setDate(startDate.getDate() - 90);
+                } else {
+                    // 전체 기간의 경우 1년 전부터
+                    startDate.setFullYear(startDate.getFullYear() - 1);
+                }
+                
+                const url = `/event_comments?start_date=${startDate.toISOString().split('T')[0]}&end_date=${endDate}&bootcamp_filter=${encodeURIComponent(bootcamp)}`;
+                const res = await fetch(url);
+                const comments = await res.json();
+                
+                renderComments(comments);
+            } catch (error) {
+                console.error('코멘트 로드 실패:', error);
+                renderComments([]);
+            }
+        }
+        
+        function renderComments(comments) {
+            // 코멘트 목록은 더 이상 표시하지 않고, 차트에만 표시
+            // 코멘트 개수를 알려주는 작은 표시만 추가
+            const commentControls = document.getElementById('commentControls');
+            const existingInfo = commentControls.querySelector('.comment-info');
+            if (existingInfo) {
+                existingInfo.remove();
+            }
+            
+            if (comments && comments.length > 0) {
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'comment-info';
+                infoDiv.style.cssText = 'margin-top: 8px; padding: 6px 10px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 4px; font-size: 0.85rem; color: #155724; text-align: center;';
+                infoDiv.innerHTML = `📊 차트에 ${comments.length}개의 이벤트 코멘트가 표시됩니다.`;
+                commentControls.appendChild(infoDiv);
+            }
+        }
+        
+        async function addComment() {
+            const date = document.getElementById('commentDate').value;
+            const comment = document.getElementById('commentText').value.trim();
+            const bootcamp = document.getElementById('bootcampFilter').value;
+            
+            if (!date || !comment) {
+                alert('날짜와 코멘트 내용을 모두 입력해주세요.');
+                return;
+            }
+            
+            try {
+                const res = await fetch('/event_comments', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        date: date,
+                        comment: comment,
+                        bootcamp_filter: bootcamp
+                    })
+                });
+                
+                const result = await res.json();
+                
+                if (res.ok) {
+                    alert(result.message);
+                    document.getElementById('commentText').value = '';
+                    loadComments(); // 코멘트 목록 새로고침
+                    // 차트도 새로고침하여 코멘트 표시 업데이트
+                    if(currentTab === 'daily' || currentTab === 'weekly') {
+                        fetchTrends();
+                    }
+                } else {
+                    alert('오류: ' + result.error);
+                }
+            } catch (error) {
+                console.error('코멘트 추가 실패:', error);
+                alert('코멘트 추가 중 오류가 발생했습니다.');
+            }
+        }
+        
+        function editComment(date, comment, commentId) {
+            document.getElementById('commentDate').value = date;
+            document.getElementById('commentText').value = comment;
+            document.getElementById('addCommentBtn').textContent = '코멘트 수정';
+            document.getElementById('addCommentBtn').onclick = function() {
+                updateComment(commentId);
+            };
+        }
+        
+        async function updateComment(commentId) {
+            const date = document.getElementById('commentDate').value;
+            const comment = document.getElementById('commentText').value.trim();
+            const bootcamp = document.getElementById('bootcampFilter').value;
+            
+            if (!date || !comment) {
+                alert('날짜와 코멘트 내용을 모두 입력해주세요.');
+                return;
+            }
+            
+            try {
+                const res = await fetch('/event_comments', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        date: date,
+                        comment: comment,
+                        bootcamp_filter: bootcamp
+                    })
+                });
+                
+                const result = await res.json();
+                
+                if (res.ok) {
+                    alert(result.message);
+                    document.getElementById('commentText').value = '';
+                    document.getElementById('addCommentBtn').textContent = '코멘트 추가';
+                    document.getElementById('addCommentBtn').onclick = addComment;
+                    loadComments(); // 코멘트 목록 새로고침
+                    // 차트도 새로고침하여 코멘트 표시 업데이트
+                    if(currentTab === 'daily' || currentTab === 'weekly') {
+                        fetchTrends();
+                    }
+                } else {
+                    alert('오류: ' + result.error);
+                }
+            } catch (error) {
+                console.error('코멘트 수정 실패:', error);
+                alert('코멘트 수정 중 오류가 발생했습니다.');
+            }
+        }
+        
+        async function deleteComment(commentId) {
+            if (!confirm('정말로 이 코멘트를 삭제하시겠습니까?')) {
+                return;
+            }
+            
+            try {
+                const res = await fetch(`/event_comments/${commentId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await res.json();
+                
+                if (res.ok) {
+                    alert(result.message);
+                    loadComments(); // 코멘트 목록 새로고침
+                    // 차트도 새로고침하여 코멘트 표시 업데이트
+                    if(currentTab === 'daily' || currentTab === 'weekly') {
+                        fetchTrends();
+                    }
+                } else {
+                    alert('오류: ' + result.error);
+                }
+            } catch (error) {
+                console.error('코멘트 삭제 실패:', error);
+                alert('코멘트 삭제 중 오류가 발생했습니다.');
+            }
+        }
+        
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}년 ${month}월 ${day}일`;
+        }
+        
+        // 코멘트 목록 로드 (관리용)
+        async function loadCommentsList() {
+            try {
+                const period = document.getElementById('periodFilter').value;
+                const bootcamp = document.getElementById('bootcampFilter').value;
+                
+                // 기간에 따른 시작일과 종료일 계산
+                const endDate = new Date().toISOString().split('T')[0];
+                let startDate = new Date();
+                
+                if (period === '7') {
+                    startDate.setDate(startDate.getDate() - 7);
+                } else if (period === '30') {
+                    startDate.setDate(startDate.getDate() - 30);
+                } else if (period === '90') {
+                    startDate.setDate(startDate.getDate() - 90);
+                } else {
+                    // 전체 기간의 경우 1년 전부터
+                    startDate.setFullYear(startDate.getFullYear() - 1);
+                }
+                
+                const url = `/event_comments?start_date=${startDate.toISOString().split('T')[0]}&end_date=${endDate}&bootcamp_filter=${encodeURIComponent(bootcamp)}`;
+                const res = await fetch(url);
+                const comments = await res.json();
+                
+                renderCommentsList(comments);
+            } catch (error) {
+                console.error('코멘트 목록 로드 실패:', error);
+                renderCommentsList([]);
+            }
+        }
+        
+        function renderCommentsList(comments) {
+            const commentsList = document.getElementById('commentsList');
+            commentsList.innerHTML = '';
+            
+            if (!comments || comments.length === 0) {
+                commentsList.innerHTML = '<div style="padding: 20px; text-align: center; color: #666; font-size: 0.9rem;">등록된 코멘트가 없습니다.</div>';
+                return;
+            }
+            
+            comments.forEach(comment => {
+                const commentItem = document.createElement('div');
+                commentItem.className = 'comment-item';
+                commentItem.style.cssText = 'padding: 8px; border-bottom: 1px solid #e9ecef; display: flex; justify-content: space-between; align-items: flex-start; font-size: 0.85rem;';
+                commentItem.innerHTML = `
+                    <div style="flex: 1;">
+                        <div style="font-weight: 700; color: var(--main-orange); margin-bottom: 2px;">${formatDate(comment.date)}</div>
+                        <div style="color: var(--main-dark); line-height: 1.3;">${comment.comment}</div>
+                        ${comment.bootcamp_filter ? `<div style="font-size: 0.8rem; color: #666; font-style: italic; margin-top: 2px;">부트캠프: ${comment.bootcamp_filter}</div>` : ''}
+                    </div>
+                    <div style="display: flex; gap: 4px; margin-left: 8px;">
+                        <button onclick="editComment('${comment.date}', '${comment.comment.replace(/'/g, "\\'")}', ${comment.id})" style="background: none; border: none; cursor: pointer; font-size: 0.75rem; color: #007bff; padding: 2px 4px; border-radius: 2px;">수정</button>
+                        <button onclick="deleteComment(${comment.id})" style="background: none; border: none; cursor: pointer; font-size: 0.75rem; color: #dc3545; padding: 2px 4px; border-radius: 2px;">삭제</button>
+                    </div>
+                `;
+                commentsList.appendChild(commentItem);
+            });
+        }
+    </script>
+</body>
+</html> 
