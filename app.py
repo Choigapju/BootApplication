@@ -78,14 +78,38 @@ class Student(db.Model):
     __tablename__ = 'students'
     
     id = db.Column(db.Integer, primary_key=True)
+    
+    # 기본 정보
     name = db.Column(db.String(100), nullable=False)
+    phone = db.Column(db.String(20), nullable=False)  # 번호
+    likelion_email = db.Column(db.String(100))  # 멋사 가입 이메일
+    application_email = db.Column(db.String(100))  # 지원서 이메일
     gender = db.Column(db.String(10))
+    birth_date = db.Column(db.String(20))  # 생년월일 (문자열로 저장)
     age = db.Column(db.Integer)
-    phone = db.Column(db.String(20), nullable=False)  # unique 제거 (여러 부트캠프 지원 가능)
-    email = db.Column(db.String(100))
-    bootcamp_id = db.Column(db.String(50), db.ForeignKey('bootcamps.id'), nullable=False)  # 외래 키 설정
+    source = db.Column(db.String(50))  # 유입 경로 (광고, 지인 추천 등)
+    application_date = db.Column(db.Date)  # 지원 완료일
+    
+    # 현황
+    is_accepted = db.Column(db.Boolean, default=False)  # 합격
+    hrd_conversion = db.Column(db.Boolean, default=False)  # HRD전환
+    learning_card = db.Column(db.Boolean, default=False)  # 내일배움카드
+    
+    # 콜 현황
+    call_needed = db.Column(db.Boolean, default=False)  # 콜 필요
+    last_call_date = db.Column(db.Date)  # 최종 콜
+    call_result = db.Column(db.Boolean, default=False)  # 콜 결과 (성공/실패)
+    
+    # 이탈 관리
+    is_considering = db.Column(db.Boolean, default=False)  # 고민 여부
+    considering_reason = db.Column(db.String(50))  # 고민 이유
+    final_call_date = db.Column(db.Date)  # 최종 콜 (이탈관리용)
+    call_success = db.Column(db.String(20))  # 콜 성과 (설득 완료, 설득 중 등)
+    additional_call_needed = db.Column(db.Boolean, default=False)  # 추가 콜 필요
+    
+    # 기존 필드들
+    bootcamp_id = db.Column(db.String(50), db.ForeignKey('bootcamps.id'), nullable=False)
     status = db.Column(db.String(20), default='applying')
-    considering_reason = db.Column(db.String(50))
     last_contact_date = db.Column(db.Date, default=datetime.datetime.now().date())
     notes = db.Column(db.Text)
     updated_at = db.Column(db.DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
@@ -97,15 +121,38 @@ class Student(db.Model):
     def to_dict(self):
         return {
             'id': self.id,
+            # 기본 정보
             'name': self.name,
-            'gender': self.gender,
-            'age': self.age,
             'phone': self.phone,
-            'email': self.email,
+            'likelionEmail': self.likelion_email,
+            'applicationEmail': self.application_email,
+            'gender': self.gender,
+            'birthDate': self.birth_date,
+            'age': self.age,
+            'source': self.source,
+            'applicationDate': self.application_date.strftime('%Y-%m-%d') if self.application_date else None,
+            
+            # 현황
+            'isAccepted': self.is_accepted,
+            'hrdConversion': self.hrd_conversion,
+            'learningCard': self.learning_card,
+            
+            # 콜 현황
+            'callNeeded': self.call_needed,
+            'lastCallDate': self.last_call_date.strftime('%Y-%m-%d') if self.last_call_date else None,
+            'callResult': self.call_result,
+            
+            # 이탈 관리
+            'isConsidering': self.is_considering,
+            'consideringReason': self.considering_reason,
+            'finalCallDate': self.final_call_date.strftime('%Y-%m-%d') if self.final_call_date else None,
+            'callSuccess': self.call_success,
+            'additionalCallNeeded': self.additional_call_needed,
+            
+            # 기존 필드들
             'bootcampId': self.bootcamp_id,
             'batchNumber': self.batch_number,
             'status': self.status,
-            'consideringReason': self.considering_reason,
             'lastContactDate': self.last_contact_date.strftime('%Y-%m-%d') if self.last_contact_date else None,
             'notes': self.notes,
             'updatedAt': self.updated_at.isoformat() if self.updated_at else None
@@ -319,10 +366,24 @@ def parse_csv(file_path, bootcamp_id, batch_number):
         # 컬럼명 매핑
         column_mapping = {
             '이름': ['이름', '가입 이름', 'name'],
+            '번호': ['번호', '전화번호', '가입 연락처', 'phone'],
+            '멋사가입이메일': ['멋사 가입 이메일', '가입 이메일', 'likelion_email'],
+            '지원서이메일': ['지원서 이메일', '이메일', 'application_email', 'email'],
             '성별': ['성별', 'gender'],
-            '나이': ['나이', '생년월일', 'age', 'birth'],
-            '전화번호': ['전화번호', '가입 연락처', 'phone'],
-            '이메일': ['이메일', '지원서 이메일', '가입 이메일', 'email']
+            '생년월일': ['생년월일', '나이', 'birth_date', 'age', 'birth'],
+            '나이': ['나이', 'age'],
+            '유입경로': ['유입 경로', '유입경로', 'source'],
+            '지원완료일': ['지원 완료일', '지원완료일', 'application_date'],
+            '합격': ['합격', 'accepted'],
+            'HRD전환': ['HRD전환', 'hrd_conversion'],
+            '내일배움카드': ['내일배움카드', 'learning_card'],
+            '콜필요': ['콜 필요', '콜필요', 'call_needed'],
+            '최종콜': ['최종 콜', '최종콜', 'last_call_date'],
+            '콜결과': ['콜 결과', '콜결과', 'call_result'],
+            '고민여부': ['고민 여부', '고민여부', 'is_considering'],
+            '고민이유': ['고민 이유', '고민이유', 'considering_reason'],
+            '콜성과': ['콜 성과', '콜성과', 'call_success'],
+            '추가콜필요': ['추가 콜 필요', '추가콜필요', 'additional_call_needed']
         }
         
         students_data = []
@@ -337,26 +398,79 @@ def parse_csv(file_path, bootcamp_id, batch_number):
                             logger.debug(f"행 {index}: {field} = {row[col]} (컬럼: {col})")
                             break
                 
-                if len(student_data) < len(column_mapping):
-                    missing_fields = set(column_mapping.keys()) - set(student_data.keys())
-                    logger.warning(f"행 {index}: 필수 필드 누락 - {missing_fields}")
+                # 최소 필수 필드 체크 (이름, 번호만 필수)
+                required_fields = ['이름', '번호']
+                missing_required = [field for field in required_fields if field not in student_data or not student_data[field]]
+                
+                if missing_required:
+                    logger.warning(f"행 {index}: 필수 필드 누락 - {missing_required}")
                     logger.warning(f"현재 행 데이터: {dict(row)}")
                     continue
                 
-                # 나이 처리 (생년월일인 경우 나이로 변환)
-                age = student_data.get('나이')
-                if isinstance(age, str) and '-' in age:  # 생년월일 형식
-                    birth_year = int(age.split('-')[0])
-                    current_year = datetime.datetime.now().year
-                    age = current_year - birth_year + 1
-                    logger.debug(f"생년월일 {age}를 나이로 변환: {age}세")
+                # 나이와 생년월일 처리
+                birth_date = student_data.get('생년월일', '')
+                age = student_data.get('나이', 0)
+                
+                if birth_date and isinstance(birth_date, str):
+                    if '-' in birth_date:  # 생년월일 형식
+                        try:
+                            birth_year = int(birth_date.split('-')[0])
+                            current_year = datetime.datetime.now().year
+                            age = current_year - birth_year + 1
+                            logger.debug(f"생년월일 {birth_date}를 나이로 변환: {age}세")
+                        except:
+                            pass
+                
+                # Boolean 값 처리 함수
+                def parse_boolean(value):
+                    if pd.isna(value) or value == '':
+                        return False
+                    if isinstance(value, bool):
+                        return value
+                    if isinstance(value, str):
+                        return value.lower() in ['true', '1', '●', 'o', 'x'] and value != 'x'
+                    return bool(value)
+                
+                # 날짜 처리 함수
+                def parse_date(value):
+                    if pd.isna(value) or value == '':
+                        return None
+                    try:
+                        if isinstance(value, str):
+                            return datetime.datetime.strptime(value, '%Y-%m-%d').date()
+                        return value
+                    except:
+                        return None
                 
                 student = Student(
-                    name=str(student_data['이름']).strip(),
-                    gender=str(student_data['성별']).strip(),
-                    age=int(float(age)) if pd.notna(age) else 0,
-                    phone=str(student_data['전화번호']).strip(),
-                    email=str(student_data['이메일']).strip(),
+                    # 기본 정보
+                    name=str(student_data.get('이름', '')).strip(),
+                    phone=str(student_data.get('번호', '')).strip(),
+                    likelion_email=str(student_data.get('멋사가입이메일', '')).strip(),
+                    application_email=str(student_data.get('지원서이메일', '')).strip(),
+                    gender=str(student_data.get('성별', '')).strip(),
+                    birth_date=str(birth_date).strip() if birth_date else '',
+                    age=int(float(age)) if pd.notna(age) and age else 0,
+                    source=str(student_data.get('유입경로', '')).strip(),
+                    application_date=parse_date(student_data.get('지원완료일')),
+                    
+                    # 현황
+                    is_accepted=parse_boolean(student_data.get('합격')),
+                    hrd_conversion=parse_boolean(student_data.get('HRD전환')),
+                    learning_card=parse_boolean(student_data.get('내일배움카드')),
+                    
+                    # 콜 현황
+                    call_needed=parse_boolean(student_data.get('콜필요')),
+                    last_call_date=parse_date(student_data.get('최종콜')),
+                    call_result=parse_boolean(student_data.get('콜결과')),
+                    
+                    # 이탈 관리
+                    is_considering=parse_boolean(student_data.get('고민여부')),
+                    considering_reason=str(student_data.get('고민이유', '')).strip(),
+                    call_success=str(student_data.get('콜성과', '')).strip(),
+                    additional_call_needed=parse_boolean(student_data.get('추가콜필요')),
+                    
+                    # 기존 필드들
                     bootcamp_id=bootcamp_id,
                     batch_number=batch_number,
                     status='접수'
@@ -490,11 +604,61 @@ def upload_file():
             os.remove(temp_path)
             return jsonify({"error": f"CSV 파일 처리에 실패했습니다: {str(csv_error)}"}), 500
         
-        logger.info("9. 데이터베이스 저장")
+        logger.info("9. 데이터베이스 저장 (중복 체크 포함)")
         try:
-            db.session.bulk_save_objects(students_data)
+            new_count = 0
+            updated_count = 0
+            
+            for student_data in students_data:
+                # 휴대전화 번호로 기존 학생 찾기 (동일인물 체크)
+                existing_student = Student.query.filter_by(
+                    phone=student_data.phone,
+                    bootcamp_id=student_data.bootcamp_id
+                ).first()
+                
+                if existing_student:
+                    # 기존 학생이 있으면 정보 업데이트
+                    logger.info(f"기존 학생 발견 - 이름: {existing_student.name}, 전화번호: {existing_student.phone}")
+                    
+                    # 새로운 정보로 업데이트 (빈 값이 아닌 경우만)
+                    if student_data.likelion_email:
+                        existing_student.likelion_email = student_data.likelion_email
+                    if student_data.application_email:
+                        existing_student.application_email = student_data.application_email
+                    if student_data.birth_date:
+                        existing_student.birth_date = student_data.birth_date
+                    if student_data.source:
+                        existing_student.source = student_data.source
+                    if student_data.application_date:
+                        existing_student.application_date = student_data.application_date
+                    
+                    # Boolean 필드들 업데이트
+                    existing_student.is_accepted = student_data.is_accepted
+                    existing_student.hrd_conversion = student_data.hrd_conversion
+                    existing_student.learning_card = student_data.learning_card
+                    existing_student.call_needed = student_data.call_needed
+                    existing_student.call_result = student_data.call_result
+                    existing_student.is_considering = student_data.is_considering
+                    
+                    if student_data.considering_reason:
+                        existing_student.considering_reason = student_data.considering_reason
+                    if student_data.call_success:
+                        existing_student.call_success = student_data.call_success
+                    
+                    existing_student.additional_call_needed = student_data.additional_call_needed
+                    existing_student.updated_at = datetime.datetime.now()
+                    
+                    updated_count += 1
+                    logger.info(f"학생 정보 업데이트: {existing_student.name}")
+                else:
+                    # 새로운 학생 추가
+                    db.session.add(student_data)
+                    new_count += 1
+                    logger.info(f"새 학생 추가: {student_data.name}")
+            
             db.session.commit()
-            logger.info(f"데이터베이스 저장 성공 - {len(students_data)}명")
+            logger.info(f"데이터베이스 저장 성공 - 새 학생: {new_count}명, 업데이트: {updated_count}명")
+            
         except Exception as save_error:
             logger.error(f"데이터베이스 저장 실패: {str(save_error)}")
             db.session.rollback()
@@ -506,7 +670,9 @@ def upload_file():
         
         return jsonify({
             "success": True,
-            "count": len(students_data),
+            "newCount": new_count,
+            "updatedCount": updated_count,
+            "totalProcessed": len(students_data),
             "bootcamp": bootcamp_id,
             "batch": batch_number
         })
@@ -523,25 +689,78 @@ def get_students():
 
 @app.route('/api/students/<int:student_id>', methods=['PUT'])
 def update_student(student_id):
-    """학생 상태 업데이트"""
+    """학생 정보 업데이트"""
     student = db.session.query(Student).filter_by(id=student_id).first_or_404()
     
     data = request.get_json()
     
-    if 'status' in data:
-        student.status = data['status']
+    # 기본 정보 필드들
+    if 'name' in data:
+        student.name = data['name']
+    if 'phone' in data:
+        student.phone = data['phone']
+    if 'likelionEmail' in data:
+        student.likelion_email = data['likelionEmail']
+    if 'applicationEmail' in data:
+        student.application_email = data['applicationEmail']
+    if 'gender' in data:
+        student.gender = data['gender']
+    if 'birthDate' in data:
+        student.birth_date = data['birthDate']
+    if 'age' in data:
+        student.age = data['age']
+    if 'source' in data:
+        student.source = data['source']
+    if 'applicationDate' in data:
+        try:
+            student.application_date = datetime.datetime.strptime(data['applicationDate'], '%Y-%m-%d').date() if data['applicationDate'] else None
+        except:
+            pass
     
+    # 현황 필드들
+    if 'isAccepted' in data:
+        student.is_accepted = data['isAccepted']
+    if 'hrdConversion' in data:
+        student.hrd_conversion = data['hrdConversion']
+    if 'learningCard' in data:
+        student.learning_card = data['learningCard']
+    
+    # 콜 현황 필드들
+    if 'callNeeded' in data:
+        student.call_needed = data['callNeeded']
+    if 'lastCallDate' in data:
+        try:
+            student.last_call_date = datetime.datetime.strptime(data['lastCallDate'], '%Y-%m-%d').date() if data['lastCallDate'] else None
+        except:
+            pass
+    if 'callResult' in data:
+        student.call_result = data['callResult']
+    
+    # 이탈 관리 필드들
+    if 'isConsidering' in data:
+        student.is_considering = data['isConsidering']
     if 'consideringReason' in data:
         student.considering_reason = data['consideringReason']
+    if 'finalCallDate' in data:
+        try:
+            student.final_call_date = datetime.datetime.strptime(data['finalCallDate'], '%Y-%m-%d').date() if data['finalCallDate'] else None
+        except:
+            pass
+    if 'callSuccess' in data:
+        student.call_success = data['callSuccess']
+    if 'additionalCallNeeded' in data:
+        student.additional_call_needed = data['additionalCallNeeded']
     
+    # 기존 필드들
+    if 'status' in data:
+        student.status = data['status']
     if 'notes' in data:
         student.notes = data['notes']
-    
     if 'lastContactDate' in data:
         try:
-            student.last_contact_date = datetime.datetime.strptime(data['lastContactDate'], '%Y-%m-%d').date()
+            student.last_contact_date = datetime.datetime.strptime(data['lastContactDate'], '%Y-%m-%d').date() if data['lastContactDate'] else None
         except:
-            pass  # 날짜 형식이 잘못된 경우 무시
+            pass
     
     student.updated_at = datetime.datetime.now()
     
@@ -627,11 +846,64 @@ def upload_bootcamp_file(bootcamp_id):
             if not bootcamp:
                 return jsonify({"error": f"존재하지 않는 부트캠프입니다: {actual_bootcamp_id}"}), 400
             
-            parsed_data = parse_csv(file_path, actual_bootcamp_id, batch_number)
+            students_data = parse_csv(file_path, actual_bootcamp_id, batch_number)
+            
+            # 중복 체크 및 저장 로직
+            new_count = 0
+            updated_count = 0
+            
+            for student_data in students_data:
+                # 휴대전화 번호로 기존 학생 찾기 (동일인물 체크)
+                existing_student = Student.query.filter_by(
+                    phone=student_data.phone,
+                    bootcamp_id=student_data.bootcamp_id
+                ).first()
+                
+                if existing_student:
+                    # 기존 학생이 있으면 정보 업데이트
+                    logger.info(f"기존 학생 발견 - 이름: {existing_student.name}, 전화번호: {existing_student.phone}")
+                    
+                    # 새로운 정보로 업데이트 (빈 값이 아닌 경우만)
+                    if student_data.likelion_email:
+                        existing_student.likelion_email = student_data.likelion_email
+                    if student_data.application_email:
+                        existing_student.application_email = student_data.application_email
+                    if student_data.birth_date:
+                        existing_student.birth_date = student_data.birth_date
+                    if student_data.source:
+                        existing_student.source = student_data.source
+                    if student_data.application_date:
+                        existing_student.application_date = student_data.application_date
+                    
+                    # Boolean 필드들 업데이트
+                    existing_student.is_accepted = student_data.is_accepted
+                    existing_student.hrd_conversion = student_data.hrd_conversion
+                    existing_student.learning_card = student_data.learning_card
+                    existing_student.call_needed = student_data.call_needed
+                    existing_student.call_result = student_data.call_result
+                    existing_student.is_considering = student_data.is_considering
+                    
+                    if student_data.considering_reason:
+                        existing_student.considering_reason = student_data.considering_reason
+                    if student_data.call_success:
+                        existing_student.call_success = student_data.call_success
+                    
+                    existing_student.additional_call_needed = student_data.additional_call_needed
+                    existing_student.updated_at = datetime.datetime.now()
+                    
+                    updated_count += 1
+                else:
+                    # 새로운 학생 추가
+                    db.session.add(student_data)
+                    new_count += 1
+            
+            db.session.commit()
             
             return jsonify({
                 "success": True, 
-                "count": len(parsed_data), 
+                "newCount": new_count,
+                "updatedCount": updated_count,
+                "totalProcessed": len(students_data),
                 "bootcamp": actual_bootcamp_id,
                 "batchNumber": batch_number
             })
@@ -673,7 +945,7 @@ def get_bootcamp_stats(bootcamp_id):
 
 @app.route('/api/bootcamps/<string:bootcamp_id>/students/<int:student_id>', methods=['PUT'])
 def update_bootcamp_student(bootcamp_id, student_id):
-    """학생 상태 업데이트 (부트캠프 ID 포함)"""
+    """학생 정보 업데이트 (부트캠프 ID 포함)"""
     # 부트캠프 존재 여부 확인
     bootcamp = db.session.query(Bootcamp).filter_by(id=bootcamp_id).first_or_404()
     
@@ -686,20 +958,73 @@ def update_bootcamp_student(bootcamp_id, student_id):
     
     data = request.get_json()
     
-    if 'status' in data:
-        student.status = data['status']
+    # 기본 정보 필드들
+    if 'name' in data:
+        student.name = data['name']
+    if 'phone' in data:
+        student.phone = data['phone']
+    if 'likelionEmail' in data:
+        student.likelion_email = data['likelionEmail']
+    if 'applicationEmail' in data:
+        student.application_email = data['applicationEmail']
+    if 'gender' in data:
+        student.gender = data['gender']
+    if 'birthDate' in data:
+        student.birth_date = data['birthDate']
+    if 'age' in data:
+        student.age = data['age']
+    if 'source' in data:
+        student.source = data['source']
+    if 'applicationDate' in data:
+        try:
+            student.application_date = datetime.datetime.strptime(data['applicationDate'], '%Y-%m-%d').date() if data['applicationDate'] else None
+        except:
+            pass
     
+    # 현황 필드들
+    if 'isAccepted' in data:
+        student.is_accepted = data['isAccepted']
+    if 'hrdConversion' in data:
+        student.hrd_conversion = data['hrdConversion']
+    if 'learningCard' in data:
+        student.learning_card = data['learningCard']
+    
+    # 콜 현황 필드들
+    if 'callNeeded' in data:
+        student.call_needed = data['callNeeded']
+    if 'lastCallDate' in data:
+        try:
+            student.last_call_date = datetime.datetime.strptime(data['lastCallDate'], '%Y-%m-%d').date() if data['lastCallDate'] else None
+        except:
+            pass
+    if 'callResult' in data:
+        student.call_result = data['callResult']
+    
+    # 이탈 관리 필드들
+    if 'isConsidering' in data:
+        student.is_considering = data['isConsidering']
     if 'consideringReason' in data:
         student.considering_reason = data['consideringReason']
+    if 'finalCallDate' in data:
+        try:
+            student.final_call_date = datetime.datetime.strptime(data['finalCallDate'], '%Y-%m-%d').date() if data['finalCallDate'] else None
+        except:
+            pass
+    if 'callSuccess' in data:
+        student.call_success = data['callSuccess']
+    if 'additionalCallNeeded' in data:
+        student.additional_call_needed = data['additionalCallNeeded']
     
+    # 기존 필드들
+    if 'status' in data:
+        student.status = data['status']
     if 'notes' in data:
         student.notes = data['notes']
-    
     if 'lastContactDate' in data:
         try:
-            student.last_contact_date = datetime.datetime.strptime(data['lastContactDate'], '%Y-%m-%d').date()
+            student.last_contact_date = datetime.datetime.strptime(data['lastContactDate'], '%Y-%m-%d').date() if data['lastContactDate'] else None
         except:
-            pass  # 날짜 형식이 잘못된 경우 무시
+            pass
     
     student.updated_at = datetime.datetime.now()
     

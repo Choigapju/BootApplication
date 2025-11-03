@@ -204,31 +204,82 @@
         }
 
         /* 테이블 스타일 */
+        .table-container {
+            overflow-x: auto;
+            max-width: 100%;
+            border: 1px solid #eee;
+            border-radius: 8px;
+        }
+
         table {
-            width: 100%;
+            min-width: 1800px; /* 최소 너비 설정 */
             border-collapse: collapse;
+            font-size: 12px; /* 폰트 크기 줄임 */
         }
 
         th {
             background-color: #f8f9fa;
-            padding: 1rem 1.25rem;
-            text-align: left;
+            padding: 0.5rem 0.75rem;
+            text-align: center;
             font-weight: 600;
             color: #4a4a4a;
-            font-size: 0.925rem;
-            border-bottom: 1px solid #eee;
+            font-size: 0.75rem;
+            border: 1px solid #ddd;
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
         td {
-            padding: 1rem 1.25rem;
-            border-bottom: 1px solid #eee;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #eee;
             color: #4a4a4a;
-            font-size: 0.925rem;
+            font-size: 0.7rem;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        /* 첫 번째 컬럼(이름)은 고정 */
+        th:first-child,
+        td:first-child {
+            position: sticky;
+            left: 0;
+            background-color: white;
+            z-index: 11;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+
+        th:first-child {
+            background-color: #e3f2fd;
         }
 
         tr:hover {
             background-color: #fff8f3;
         }
+
+        /* 입력 필드 스타일 조정 */
+        .table-container input[type="text"],
+        .table-container input[type="email"],
+        .table-container input[type="date"],
+        .table-container select {
+            width: 100%;
+            max-width: 120px;
+            padding: 0.25rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.7rem;
+        }
+
+        .table-container input[type="checkbox"] {
+            transform: scale(1.2);
+        }
+
+        /* 섹션별 배경색 */
+        .section-basic { background-color: #e3f2fd !important; }
+        .section-status { background-color: #f3e5f5 !important; }
+        .section-call { background-color: #e8f5e8 !important; }
+        .section-retention { background-color: #fff3e0 !important; }
 
         /* 입력 필드 스타일 */
         .memo-input, .status-select {
@@ -759,15 +810,40 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>이름</th>
-                            <th>성별</th>
-                            <th>나이</th>
-                            <th>연락처</th>
-                            <th>이메일</th>
-                            <th>상태</th>
-                            <th>마지막 연락일</th>
-                            <th>메모</th>
-                            <th>관리</th>
+                            <!-- 그룹 헤더 -->
+                            <th colspan="9" style="text-align: center; background-color: #e3f2fd; font-weight: bold; border-right: 2px solid #ccc;">1. 기본 정보</th>
+                            <th colspan="3" style="text-align: center; background-color: #f3e5f5; font-weight: bold; border-right: 2px solid #ccc;">2. 현황</th>
+                            <th colspan="3" style="text-align: center; background-color: #e8f5e8; font-weight: bold; border-right: 2px solid #ccc;">3. 콜 현황</th>
+                            <th colspan="5" style="text-align: center; background-color: #fff3e0; font-weight: bold;">4. 이탈 관리 (고민 중)</th>
+                        </tr>
+                        <tr>
+                            <!-- 1. 기본 정보 -->
+                            <th style="background-color: #e3f2fd;">이름</th>
+                            <th style="background-color: #e3f2fd;">번호</th>
+                            <th style="background-color: #e3f2fd;">멋사 가입 이메일</th>
+                            <th style="background-color: #e3f2fd;">지원서 이메일</th>
+                            <th style="background-color: #e3f2fd;">성별</th>
+                            <th style="background-color: #e3f2fd;">생년월일</th>
+                            <th style="background-color: #e3f2fd;">나이</th>
+                            <th style="background-color: #e3f2fd;">유입 경로</th>
+                            <th style="background-color: #e3f2fd; border-right: 2px solid #ccc;">지원 완료일</th>
+                            
+                            <!-- 2. 현황 -->
+                            <th style="background-color: #f3e5f5;">합격</th>
+                            <th style="background-color: #f3e5f5;">HRD전환</th>
+                            <th style="background-color: #f3e5f5; border-right: 2px solid #ccc;">내일배움카드</th>
+                            
+                            <!-- 3. 콜 현황 -->
+                            <th style="background-color: #e8f5e8;">콜 필요</th>
+                            <th style="background-color: #e8f5e8;">최종 콜</th>
+                            <th style="background-color: #e8f5e8; border-right: 2px solid #ccc;">콜 결과</th>
+                            
+                            <!-- 4. 이탈 관리 -->
+                            <th style="background-color: #fff3e0;">고민 여부</th>
+                            <th style="background-color: #fff3e0;">고민 이유</th>
+                            <th style="background-color: #fff3e0;">최종 콜</th>
+                            <th style="background-color: #fff3e0;">콜 성과</th>
+                            <th style="background-color: #fff3e0;">추가 콜 필요</th>
                         </tr>
                     </thead>
                     <tbody id="studentTableBody">
@@ -977,7 +1053,8 @@
                 }
                 
                 hideLoading();
-                showAlert(`${result.count}명의 학생 데이터가 성공적으로 업로드되었습니다.`);
+                const message = `업로드 완료!\n새 학생: ${result.newCount}명\n업데이트: ${result.updatedCount}명\n총 처리: ${result.totalProcessed}명`;
+                showAlert(message);
             } catch (error) {
                 hideLoading();
                 showAlert('파일 업로드 중 오류가 발생했습니다. 다시 시도해주세요.');
@@ -1276,7 +1353,7 @@
             if (filteredStudents.length === 0) {
                 const emptyRow = document.createElement('tr');
                 emptyRow.innerHTML = `
-                    <td colspan="9" style="text-align: center; padding: 2rem;">
+                    <td colspan="20" style="text-align: center; padding: 2rem;">
                         ${currentBootcampName}에 등록된 데이터가 없습니다.
                     </td>
                 `;
@@ -1287,57 +1364,86 @@
             filteredStudents.forEach(student => {
                 const row = document.createElement('tr');
                 
-                // 고민중 상태일 때 이유 텍스트 가져오기
-                let reasonText = '';
-                if (student.status === 'considering' && student.consideringReason) {
-                    const reasonObj = consideringReasons.find(r => r.value === student.consideringReason);
-                    reasonText = reasonObj ? reasonObj.label : '';
-                }
+                // 체크박스 표시 함수
+                const renderCheckbox = (value, fieldName, studentId) => {
+                    return `<input type="checkbox" ${value ? 'checked' : ''} onchange="updateStudentField(${studentId}, '${fieldName}', this.checked)">`;
+                };
                 
-                // 상태에 따른 배지 클래스
-                const badgeClass = `badge-${student.status}`;
+                // 날짜 표시 함수
+                const formatDate = (dateStr) => {
+                    return dateStr ? dateStr : '-';
+                };
                 
-                row.innerHTML = `
-                    <td>${student.name}</td>
-                    <td>${student.gender || ''}</td>
-                    <td>${student.age}세</td>
-                    <td>
-                        <div class="phone-container">
-                            ${student.phone}
-                            <i class="fas fa-phone phone-icon" onclick="callStudent('${student.phone}')"></i>
-                        </div>
-                    </td>
-                    <td>${student.email || ''}</td>
-                    <td>
-                        <div>
-                            <span class="status-badge ${badgeClass}">
-                                ${statusOptions[student.status]}
-                            </span>
-                            ${reasonText ? `<div class="reason-text">${reasonText}</div>` : ''}
-                        </div>
-                    </td>
-                    <td>${student.lastContactDate}</td>
-                    <td>
-                        <input
-                            type="text"
-                            class="note-input"
-                            placeholder="메모 추가..."
-                            value="${student.notes || ''}"
-                            onchange="handleNoteChange(${student.id}, this.value)"
-                        >
-                    </td>
-                    <td>
-                        <select
-                            class="status-select"
-                            onchange="handleStatusChange(${student.id}, this.value)"
-                        >
-                            ${Object.entries(statusOptions).map(([value, label]) => `
-                                <option value="${value}" ${student.status === value ? 'selected' : ''}>
-                                    ${label}
+                // 선택 옵션 렌더링
+                const renderSelect = (currentValue, options, fieldName, studentId) => {
+                    return `
+                        <select onchange="updateStudentField(${studentId}, '${fieldName}', this.value)">
+                            <option value="">선택</option>
+                            ${options.map(option => `
+                                <option value="${option.value}" ${currentValue === option.value ? 'selected' : ''}>
+                                    ${option.label}
                                 </option>
                             `).join('')}
                         </select>
+                    `;
+                };
+                
+                // 유입 경로 옵션
+                const sourceOptions = [
+                    { value: '광고', label: '광고' },
+                    { value: '지인 추천', label: '지인 추천' },
+                    { value: '검색', label: '검색' },
+                    { value: '기타', label: '기타' }
+                ];
+                
+                // 콜 성과 옵션
+                const callSuccessOptions = [
+                    { value: '설득 완료', label: '설득 완료' },
+                    { value: '설득 중', label: '설득 중' },
+                    { value: '실패', label: '실패' }
+                ];
+                
+                // 고민 이유 옵션
+                const reasonOptions = [
+                    { value: '건강', label: '건강' },
+                    { value: '일정', label: '일정' },
+                    { value: '비용', label: '비용' },
+                    { value: '기타', label: '기타' }
+                ];
+                
+                row.innerHTML = `
+                    <!-- 1. 기본 정보 -->
+                    <td>${student.name || ''}</td>
+                    <td>
+                        <div class="phone-container">
+                            ${student.phone || ''}
+                            <i class="fas fa-phone phone-icon" onclick="callStudent('${student.phone}')"></i>
+                        </div>
                     </td>
+                    <td><input type="email" value="${student.likelionEmail || ''}" onchange="updateStudentField(${student.id}, 'likelionEmail', this.value)" style="width: 150px; font-size: 12px;"></td>
+                    <td><input type="email" value="${student.applicationEmail || ''}" onchange="updateStudentField(${student.id}, 'applicationEmail', this.value)" style="width: 150px; font-size: 12px;"></td>
+                    <td>${student.gender || ''}</td>
+                    <td><input type="text" value="${student.birthDate || ''}" onchange="updateStudentField(${student.id}, 'birthDate', this.value)" style="width: 80px; font-size: 12px;" placeholder="970617"></td>
+                    <td>${student.age || ''}세</td>
+                    <td>${renderSelect(student.source, sourceOptions, 'source', student.id)}</td>
+                    <td style="border-right: 2px solid #ccc;"><input type="date" value="${student.applicationDate || ''}" onchange="updateStudentField(${student.id}, 'applicationDate', this.value)" style="width: 120px; font-size: 12px;"></td>
+                    
+                    <!-- 2. 현황 -->
+                    <td>${renderCheckbox(student.isAccepted, 'isAccepted', student.id)}</td>
+                    <td>${renderCheckbox(student.hrdConversion, 'hrdConversion', student.id)}</td>
+                    <td style="border-right: 2px solid #ccc;">${renderCheckbox(student.learningCard, 'learningCard', student.id)}</td>
+                    
+                    <!-- 3. 콜 현황 -->
+                    <td>${renderCheckbox(student.callNeeded, 'callNeeded', student.id)}</td>
+                    <td><input type="date" value="${student.lastCallDate || ''}" onchange="updateStudentField(${student.id}, 'lastCallDate', this.value)" style="width: 120px; font-size: 12px;"></td>
+                    <td style="border-right: 2px solid #ccc;">${renderCheckbox(student.callResult, 'callResult', student.id)}</td>
+                    
+                    <!-- 4. 이탈 관리 -->
+                    <td>${renderCheckbox(student.isConsidering, 'isConsidering', student.id)}</td>
+                    <td>${renderSelect(student.consideringReason, reasonOptions, 'consideringReason', student.id)}</td>
+                    <td><input type="date" value="${student.finalCallDate || ''}" onchange="updateStudentField(${student.id}, 'finalCallDate', this.value)" style="width: 120px; font-size: 12px;"></td>
+                    <td>${renderSelect(student.callSuccess, callSuccessOptions, 'callSuccess', student.id)}</td>
+                    <td>${renderCheckbox(student.additionalCallNeeded, 'additionalCallNeeded', student.id)}</td>
                 `;
                 
                 studentTableBody.appendChild(row);
@@ -1499,10 +1605,73 @@
         // 페이지 로드 시 초기화
         document.addEventListener('DOMContentLoaded', init);
         
+        // 새로운 필드 업데이트 함수
+        async function updateStudentField(studentId, fieldName, value) {
+            try {
+                const updateData = {};
+                updateData[fieldName] = value;
+                
+                // 서버에 필드 업데이트 요청
+                let apiUrl = currentBootcamp === 'all' 
+                    ? `${API_URL}/students/${studentId}`
+                    : `${API_URL}/bootcamps/${currentBootcamp}/students/${studentId}`;
+                    
+                const response = await fetch(apiUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updateData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('필드 업데이트 중 오류가 발생했습니다.');
+                }
+                
+                // 로컬 데이터 업데이트
+                students = students.map(student => {
+                    if (student.id === studentId) {
+                        return {
+                            ...student,
+                            [fieldName]: value,
+                            updatedAt: new Date().toISOString()
+                        };
+                    }
+                    return student;
+                });
+                
+                // 화면 업데이트
+                handleTabChange(currentTab);
+                updateStats();
+                updateCharts();
+            } catch (error) {
+                console.error('필드 업데이트 오류:', error);
+                
+                // 오프라인 모드를 위한 대비책
+                students = students.map(student => {
+                    if (student.id === studentId) {
+                        return {
+                            ...student,
+                            [fieldName]: value,
+                            updatedAt: new Date().toISOString()
+                        };
+                    }
+                    return student;
+                });
+                
+                // 화면 업데이트
+                handleTabChange(currentTab);
+                updateStats();
+                
+                alert('서버 연결 실패: 변경사항이 임시로 저장되었습니다.');
+            }
+        }
+
         // 전역 함수 정의 (HTML에서 직접 호출 가능하도록)
         window.handleStatusChange = handleStatusChange;
         window.handleNoteChange = handleNoteChange;
         window.callStudent = callStudent;
+        window.updateStudentField = updateStudentField;
 
         function showLoading() {
             document.getElementById('loadingModal').style.display = 'block';
